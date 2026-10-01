@@ -76,7 +76,7 @@ The assessment criteria largely track Stiegler's seven aspects of sharing (see t
 * Composability is not listed as a separate criterion, since any capability system satisfies it trivially, so it does not discriminate among the candidates under evaluation;   
 * Functional resistance to confused deputy attacks (item 2\) replaces the more formal composability, as it was proved the more useful rubric, \]  
 * An additional requirement that authorization *policies* be representable (at least by reference) in the specification (item 3), which is a practical necessity in enterprise and large-scale deployments, and  
-* Stiegler's "dynamic" aspect (delegation without undue delay) is relaxed from a requirement to the offline-capable nice-to-have below.
+* Stiegler's "dynamic" aspect (delegation without undue delay) is not scored as a criterion. It is covered by the per-stage reachability analysis under Offline Use Considerations below.
 
 For this report, the final list of assessment criteria is:
 
@@ -94,10 +94,9 @@ For this report, the final list of assessment criteria is:
 
 **Not required but nice to have:**
 
-1. **Authentication grounded in first-class, in-band Proof of Possession**   
-2. **Offline-capable:** Create tokens offline, delegate offline, use/present offline. Agentic Use cases: most of them online, but some are offline-capable to (local machine, or local LAN only agentic use cases). Also, offline-capable parts of the spec can offer efficiency advantages. For example, if it’s possible to  delegate without having to contact the resource server, there’s a significant speed advantage.
+1. **Authentication grounded in first-class, in-band Proof of Possession**
 
-Privacy of the delegation chain was considered as a further nice-to-have and dropped from the checklist. The reasons are given under Delegation Chain Privacy Considerations below.
+Two further nice-to-haves were considered and dropped from the checklist. Privacy of the delegation chain is discussed under Delegation Chain Privacy Considerations below. Offline capability is replaced by a per-stage account of which endpoints must be reachable, under Offline Use Considerations below.
 
 ### General Data Model (In Common)
 
@@ -140,6 +139,36 @@ None of the surveyed specifications encrypts, blinds, or selectively discloses t
 In practice this matters less than the original criterion implied. What a chain exposes is a sequence of identifiers and the permissions passed between them. Using ephemeral, pairwise, or one-off identifiers for each delegation provides sufficient privacy of the delegation chain for most agentic use cases. zCaps already use urn:uuid capability identifiers to reduce correlation, and any DID-based system can mint a fresh key per delegation. A verifier or an intermediate agent then sees that a chain exists and that each edge is validly signed, but cannot correlate the parties across chains or link them to a real-world entity. Any additional information about the actors in a chain is stored out of band, as DID document contents, verifiable credentials, or other identifier-anchored metadata, and is disclosed on its own terms. This is compatible with the accountability criterion (item 1). An auditor can resolve pairwise identifiers to responsible parties through that out-of-band layer without the chain itself carrying global identities.
 
 Selective disclosure or blinding of chain interiors against the verifier remains an open design problem. The "disclosure governance" sub-item of the policy criterion (item 3) is where a specification would express rules about who may see what. We note chain privacy here as a consideration for future work rather than as an evaluation axis.
+
+### Offline Use Considerations
+
+Earlier drafts of this report listed offline capability as a nice-to-have criterion, defined as the ability to create, delegate, and present tokens without network access. The criterion was dropped because a single verdict cannot carry the answer. For every specification surveyed, the honest verdict was a Partial that had to be unpacked by lifecycle stage. The question that does discriminate among the candidates is narrower. At each step of a delegated operation, which endpoints must be reachable, and what can be cached in advance so that the step succeeds without them?
+
+The table below answers that question for five stages. Verdicts are drawn from the per-spec chapters, which hold the reasoning.
+
+* Obtain authority: the first grant, from the principal or resource owner to the agent.  
+* Extend the chain: a delegatee grants a subset of its authority to a further agent.  
+* Invoke: the agent exercises the authority against the resource.  
+* Verify: the enforcement point checks that the presented authority is valid.  
+* Check revocation: the enforcement point learns whether the authority has been withdrawn.
+
+| Stage | OAuth 2.0/2.1 | AAuth | zCaps / UCANs | Cedar | AuthZEN | dSD-JWT |
+| :---- | :---- | :---- | :---- | :---- | :---- | :---- |
+| Obtain authority | Authorization Server token endpoint | Agent Provider for the agent token. Identity-based mode needs no further issuance; resource-managed and PS-asserted modes need the resource or the Person Server | None. The resource owner signs a root capability locally | Policy store write by an administrator | Not defined; delegation is outside the specification | Issuer signs the base credential and delivers it to the holder |
+| Extend the chain | Authorization Server token exchange endpoint (RFC 8693). No holder-side extension | Person Server and Mission Log; server-mediated | None. The delegatee signs a child capability with its own key. Only the next delegatee's DID or key is needed in hand | Policy store write, then distribution to edge PDPs | Not defined | None. The holder signs the next hop locally |
+| Invoke | Resource Server | Resource, by signed request | Resource Server (zCaps) or executor (UCAN). A local or LAN resource suffices | Local embedded PDP (Cedarling) | PEP calls the PDP for each decision; the PDP may be local or remote | Verifier |
+| Verify | Local for JWT access tokens (RFC 9068) given cached Authorization Server keys. Opaque tokens need the introspection endpoint (RFC 7662) | Local signature check against keys from well-known metadata and JWKS. Keys MUST be cached and SHOULD still be used for up to 24 hours after a failed fetch; initial discovery is online | Local chain check. zCaps carry the full chain in the invocation; UCAN resolves proofs by CID from a local store or the network. DID resolution for chain keys needs the network unless DID documents are cached or the method is self-certifying (did:key) | Local once the policy store is loaded. Identity evidence is JWTs checked against pre-configured issuer keys | PDP decision; there is no artifact to verify locally | Local. The root key comes from DID resolution or issuer metadata unless cached; hop keys are embedded JWKs |
+| Check revocation | Revocation is requested at the Authorization Server (RFC 7009). The Resource Server learns of it through introspection or by waiting out short lifetimes; a locally verifying JWT Resource Server does not learn of it before expiry | At the servers holding authority (Person Server, Access Server); the resource learns through its interaction with them | zCaps: revocation is posted to the Resource Server revocation endpoint, and the RS consults its own state at invocation. UCAN: the executor's revocation store, filled by whatever dissemination the deployment uses (gossip, DHT); behavior under partition is undefined | Policy store update, reaching edge PDPs on refresh | Policy change at the PDP's store | Token Status List at the issuer, for the base credential only. Nothing below the root; short expiry is the fallback |
+
+Three patterns stand out.
+
+The certificate capability family and dSD-JWT are the only columns in which obtaining and extending authority need no reachable endpoint. Delegation is a local signing act, so a chain can grow with no round trip and while partitioned from every server. This is the efficiency advantage the earlier criterion was reaching for, and it is also where Stiegler's "dynamic" aspect reads off the table directly. In the server-mediated columns, every hop is a protocol exchange with an Authorization Server or Person Server. In the policy decision columns, a grant is an administrative write to a store.
+
+Verification is local in nearly every column, provided the right material is cached. The divide is in what must be cached and how stale it may be. A JWT Resource Server caches Authorization Server keys. AAuth bounds its key cache at 24 hours. A zCap or UCAN verifier needs the DID documents of every key in the chain, or a self-certifying DID method, to check the chain with no network. Cedar needs a loaded policy store. AuthZEN is the exception, since the decision is the PDP's and there is nothing to cache in its place.
+
+Revocation is online in every column. Each surveyed mechanism is state at some enforcement point that a party must reach, either to post the revocation or to learn of it. The capability family moves that point to the resource itself, which helps the local-machine and LAN use cases, but no column offers revocation semantics under partition. This is the gap recorded as item 4 in the Synthesis chapter's Gaps list.
+
+For the local-machine and LAN-only agentic use cases, the practical reading is by column. The capability family and Cedar operate fully within the LAN once DID documents or the policy store are in place. OAuth does so only when the Authorization Server is itself on the LAN. AAuth and AuthZEN depend on the Person Server or PDP being reachable, wherever it sits.
 
 ## OAuth Family Evaluation
 
@@ -413,12 +442,6 @@ Verdict: Yes
 
 Core capability of the protocol. `draft-10` requires a fully-specified alg identifier, recommends Ed25519, and prohibits none, symmetric algorithms, and the polymorphic EdDSA identifier that RFC 9864 deprecated.
 
-#### Offline Capable
-
-Verdict: Partial
-
-Implementations MUST cache JWKS and SHOULD continue verifying against cached keys when a fetch fails, bounded by a cache lifetime of at most 24 hours, so token verification survives temporary loss of contact with an issuer. Obtaining authority remains online-only: AAuth's server-mediated model provides no offline delegation, and initial key discovery requires reachable metadata.
-
 ### Detailed Evaluation
 
 #### Accountable (agent vs. principal/operator)
@@ -522,7 +545,6 @@ Reference points used in this evaluation:
 | 6 | Attenuated | Yes | Yes | Both enforce monotonic attenuation, on different axes. zCaps: allowedAction subsets, no-later expires, URL path/query suffix narrowing of invocationTarget. UCAN: capability sets must not widen, nbf/exp validity intersection, command-lattice narrowing, policy statements. |
 | 7 | Self-revocable (holder or anyone in chain) | Yes (at RS) | Yes (per Revocation spec) | Same guarantee, opposite mechanics. zCaps: any controller in the chain POSTs the zCap to an RS revocation endpoint; out-of-band, RS-enforced, online-only. UCAN: revocation is a first-class command (/ucan/revoke) with a Revoker role, expressed inside the same capability model; dissemination is left open (DHT, gossip, etc.). |
 | \+ | Authentication / Proof of Possession | Yes | Yes | zCaps: HTTP Message Signatures (Cavage, migrating to RFC 9421\) or a Data Integrity capabilityInvocation proof; the request itself is signed. UCAN: the Varsig envelope is signed by the issuer key, with a required nonce, time bounds, and signed invocations. Both are DPoP-analogous: an intercepted invocation cannot be replayed without the key. |
-| \+ | Offline-capable | Yes for delegation and verification | Yes for delegation and verification | The family's signature efficiency win: delegating requires no contact with the resource server. Chain verification is local. Invocation depends on reaching the resource; revocation depends on reaching the RS (zCaps) or on propagation (UCAN). |
 
 ### Detailed Evaluation
 
@@ -601,15 +623,6 @@ Possession alone is never sufficient in either spec; invocation requires proving
 zCaps define two binding mechanisms: an HTTP Message Signature (deployments use Cavage Draft 12 today, migrating to RFC 9421\) over a Capability-Invocation header, plus Digest/Content-Digest for bodies; or a Data Integrity capabilityInvocation proof attached to a request document. Either binding mechanism requires a digital signature. Note that as with all proof-of-possession signature mechanisms, additional replay attack mechanisms are required (and used by zCaps), such as short expiration periods and unique ids tracked by the resource server/verifier. 
 
 UCAN builds proof of possession into its envelope: every token is signed by the issuer DID's key over the canonical DAG-CBOR payload, and replay protection is layered (a required nonce, nbf/exp time bounds, and signed invocations at the transport layer). The intent is the same as zCaps' HTTP signatures; the expression lives in the UCAN envelope rather than in a separate signing convention.
-
-#### Offline-capable
-
-The offline story is the same for both, split by lifecycle stage, and it is the family's signature efficiency advantage:
-
-* Delegation: fully offline. Delegating is signing a new child artifact with an authorized key; no contact with the resource server or any authorization server.  
-* Chain verification: offline-capable. The verifier checks the supplied or resolved chain locally (subject to the DID-method and revocation-freshness caveats noted under \#5).  
-* Invocation: depends on reaching the resource. If the RS or executor is reachable offline (local machine, LAN), invocation can be offline too.  
-* Revocation: depends on reaching the RS (zCaps) or on the deployment's propagation pattern (UCAN), per \#7.
 
 ### Where the Two Specs Diverge
 
@@ -693,7 +706,6 @@ Where Cedar (the language) and runtime-evaluation deployments like Cedarling dif
 | 6 | **Attenuated** | Partial | Forbid-overrides-permit gives monotonic restriction: layering additional forbid policies (or a stricter verifier-side policy set) can only shrink authority, never expand it. But Cedar has no runtime check that a delegatee's grant is a subset of the delegator's; subset/equivalence can be proven offline with Cedar's symbolic analysis tooling. Attenuation enforcement is a stack responsibility. |
 | 7 | **Self-revocable** (holder or somebody in chain) | Partial | Revocation is a policy store change (remove a permit or add a forbid), immediate at the next evaluation and very fine-grained. But it is performed by whoever administers the policy store, not natively by a delegator or delegatee in the chain; mapping chain participants to revocation rights is a stack design task. Cascade to downstream grants is not native either: it holds only if delegation is modeled as linked entities whose policy re-checks the ancestry. |
 | \+ | Authentication / proof of possession | No (out of scope) | Cedar does not authenticate. Cedarling validates JWT signatures (proof of issuance by a trusted issuer), which is not holder proof of possession; PoP binding is left to the token layer. |
-| \+ | Offline-capable | Partial | Evaluation is fully offline once the policy store is loaded (this is Cedarling's headline feature). But *granting* a delegation means writing to a policy store, which is an online, administrative act, the opposite of zCaps' offline delegation-by-signing. |
 
 ### Cedar Evaluation
 
@@ -771,12 +783,6 @@ The one caveat mirrors row 5: all the composed sources must already be present i
 
 Out of scope for Cedar by design: the engine assumes the principal has already been authenticated and evaluates the request it is handed. Cedarling adds issuance-side verification: JWT signature validation against pre-configured trusted issuers, aud/sub cross-checks between tokens, optional status checks, and exp/nbf checks. This proves the tokens were issued by a trusted party and are current, not that the presenter is the rightful holder. Sender-constrained tokens (DPoP/mTLS-bound) can be layered in by the token infrastructure, but Cedar/Cedarling does not itself verify possession.
 
-#### Offline-capable
-
-* **Evaluation/use: fully offline.** This is Cedarling's reason for existing: the PDP is embedded (browser WASM, mobile, gateway, local process) and decides locally with no network round trip. Local-machine and LAN-only agentic use cases are well served; the Clawdrey deployment is exactly this shape (an agent on a single machine consulting its local Cedar engine before each action).  
-* **Delegation/granting: online and administrative.** Creating a new grant means writing to a policy store and distributing it. There is no offline delegate-by-signing; the efficiency advantage the matrix highlights (delegate without contacting anyone) is absent.  
-* **Revocation: online to the store, then eventually consistent** to edge PDPs on refresh.
-
 ### Summary
 
 Cedar is, almost row by row, the complement of the capability-based technologies in this survey. It is strongest exactly where zCaps are weakest: rich, analyzable, schema-validated policy expression (including "undelegatable" and re-delegation rules), native agent-vs-operator modeling, composition of authority from multiple sources in one decision, fine-grained immediate revocation, and fully local evaluation at the edge. It is weakest exactly where zCaps are strongest: there is no delegation chain, no portable signed grant, no holder-side revocation, no offline delegation, and no cryptographic attribution of who authorized whom; all of these are verifier-side state administered through a policy store.
@@ -843,7 +849,6 @@ Many of the entries in the scorecard are marked as No, but this does not imply t
 | 6 | Attenuated | No | The core API has no native delegation or attenuation model. The broader ecosystem also does not establish that downstream authority is a non-widening subset of upstream authority. Any attenuation must therefore be implemented by the underlying policy engine and data model, not by AuthZEN itself. |
 | 7 | Self-revocable (holder or anyone in chain) | No | No native self-revocation of delegated authority. Revocation is a responsibility of surrounding policy/token/delegation systems. Policy changes can revoke access, but this is different from delegation-chain self-revocation by the delegator or holder. |
 | \+ | Authentication / Proof of Possession | No (out of scope) | AuthZEN relies on external authentication mechanisms and does not define holder proof-of-possession for delegated authority. |
-| \+ | Offline-capable | No | AuthZEN is transport-agnostic and a PDP can be deployed locally. However, "Offline" in this context means the ability to create, carry, present, and verify delegated authority without contacting a PDP. Because AuthZEN defines neither a native delegation artifact nor an offline-verifiable delegation primitive, its Offline-capable verdict should be No. |
 
 ### Detailed Evaluation
 
@@ -920,14 +925,6 @@ The ecosystem does not add delegation-chain self-revocation capabilities. The Po
 Authentication of the Authorization API is explicitly out of scope. While OAuth 2.0 support is [RECOMMENDED](https://openid.net/specs/authorization-api-1_0.html#name-model), OAuth 2.0 deployments are typically based on bearer tokens and therefore do not inherently provide holder proof-of-possession. Achieving proof-of-possession generally requires additional mechanisms such as DPoP, mTLS, sender-constrained tokens, or comparable cryptographic binding techniques. AuthZEN neither mandates nor standardizes any of these mechanisms. Consequently, while AuthZEN can operate in deployments that provide proof-of-possession through external identity and transport layers, the specification itself does not define holder-bound credentials or cryptographic proof-of-possession for delegated authority.
 
 The ecosystem improves the integrity and trustworthiness of identity-related inputs, but it still does not satisfy the proof-of-possession criterion. COAZ can designate [trust-anchored fields](https://openid.github.io/authzen/authzen-coaz-framework-1_0.html#name-trust-anchored-fields) that must be derived from trusted inputs or verified by the PEP. COAZ-MCP uses [decoded JWT OAuth access-token](https://openid.github.io/authzen/authzen-coaz-mcp-binding-1_0.html#name-information-model) claims and [recommends anchoring subject.id to the designated subject-identity claim](https://openid.github.io/authzen/authzen-coaz-mcp-binding-1_0.html#name-declared-mappings). It also keeps agent identity separately in [context.agent](https://openid.github.io/authzen/authzen-coaz-mcp-binding-1_0.html#name-the-subject-identity-claim). These mechanisms reduce the risk of identity-claim substitution, but they do not require sender-constrained tokens, a signed invocation, or proof that the agent possesses a private key bound to delegated authority. The Policy Store packages [trusted-issuer](https://htmlpreview.github.io/?https://github.com/nynymike/AuthZen_Policy_Store/blob/main/draft-schwartz-authzen-policy-store.html#name-trusted-issuers) configuration and policy artifacts, but it likewise does not establish holder proof-of-possession for delegated authority.
-
-#### Offline-capable
-
-The Core does not satisfy this criterion because the specification does not define a self-contained delegated-authority artifact that can be created, delegated, presented, and independently verified without PDP involvement. The normal AuthZEN model is the evaluation of an authorization request by a PDP at runtime. Although the specification is transport-agnostic and permits locally deployed or embedded PDPs, local communication is not equivalent to offline delegation. The ability to evaluate authorization decisions without an external network connection should not be confused with the ability to create, transfer, and verify delegated authority offline.
-
-The same conclusion applies when the ecosystem specifications are considered. Neither Policy Store, COAZ, nor COAZ-MCP defines a self-contained delegated-authority artifact that can be presented and independently verified outside the PDP evaluation model. Consequently, the ecosystem provides no standardized basis for offline delegation. While some deployments may reduce network dependencies through locally available policy artifacts or locally deployed PDPs, runtime authorization remains dependent on a PDP or policy engine rather than a self-verifying delegation artifact.
-
-More precisely, locally deployed or disconnected PDPs may support offline policy evaluation, but they do not provide offline delegation.
 
 ### Additional Considerations
 
@@ -1018,7 +1015,6 @@ Verdicts below are taken from the per-spec chapters, which carry the detailed re
 | 6 | Attenuated | Via the AS only (scope narrowing, Token Exchange); not by the holder | Partial, differs by mode: sub-agent yes, call chaining intentionally no | Yes: monotonic, verifier-enforced | Yes: monotonic, verifier-enforced | Partial: forbid-composition shrinks authority, but no subset check between grants | No: attenuation left to the underlying policy engine | No: payload is arbitrary; narrowing deferred to a profile |
 | 7 | Self-revocable (holder or chain) | Partial: RFC 7009 plus short lifetimes; no chain concept | Partial: revocation by the servers holding authority, not the holder | Yes, at the RS revocation endpoint | Yes, via the Revocation sub-spec | Partial: policy store change by the administrator | No: policy change is administrative, not holder revocation | No: status list on the base credential only |
 | \+ | Authentication / Proof of Possession | Optional (DPoP, mTLS); bearer remains the deployed default | Yes: every request signed, core mechanism | Yes: HTTP signatures or Data Integrity proofs | Yes: signed envelope, nonce, time bounds | No: out of scope; evidence-issuance checks only | No: out of scope; bearer OAuth is the recommended default | Yes: Key Binding JWT per hop, aud and nonce |
-| \+ | Offline-capable | Partial: issuance online; JWT verification offline | Partial: verification survives on cached keys; obtaining authority online | Yes for delegation and verification | Yes for delegation and verification | Partial: evaluation offline; granting online and administrative | No: local PDP evaluation is not offline delegation | Delegation yes; verification if the root key resolves offline |
 
 ### Reading the matrix
 
@@ -1035,7 +1031,7 @@ No column is complete. Every spec has at least one No or Partial in the required
 AAuth and the certificate capability family aim at the same use case (autonomous agents acting across organizational boundaries under delegated, revocable, auditable authority) and give opposite answers to the central question of where authority lives. The contrast is the sharpest one available in this survey, precisely because so much else about them agrees: both reject bearer tokens for signed requests, both identify agents by key material, both record who delegated what to whom.
 
 * Portability. A certificate capability is self-contained: the chain travels with the invocation and any verifier can check it. AAuth's delegation history lives in the Person Server's Mission Log; verification of standing depends on authenticated interaction with the server that holds the state.  
-* Offline delegation. The capability family delegates by signing, with no round trip. AAuth has no offline delegation; obtaining and extending authority are online protocol exchanges. This is the efficiency and partition-tolerance line.  
+* Offline delegation. The capability family delegates by signing, with no round trip. AAuth has no offline delegation; obtaining and extending authority are online protocol exchanges. This is the efficiency and partition-tolerance line, laid out stage by stage under Offline Use Considerations in the Introduction.  
 * Attenuation. The capability family enforces algebraic, monotonic attenuation at every link: a child provably holds a subset. AAuth deliberately rejects the subset rule for call chaining; the Person Server evaluates each hop against mission context, which its specification argues is more flexible than algebraic rules. This is a genuine philosophical split (constraint by algebra versus constraint by governance), not an omission on either side.  
 * Revocation locus. In the capability family, anyone in the chain can revoke, and the enforcement point learns of it. In AAuth, the servers holding authority revoke; the holder of a credential cannot act on the credential itself.  
 * Key lifecycle. AAuth delegations reference stable agent identifiers, with the cnf claim binding tokens to the current key; identity survives key rotation, at the cost of lifecycle questions about delegations that straddle a rotation. The capability family binds delegations to keys directly, and typically sidesteps rotation with short-lived, delegation-specific keys.
@@ -1101,11 +1097,10 @@ Reference points: the draft text (sections 4 through 8) and the SDK's design not
 | 6 | Attenuated | No | Neither the draft nor the implementation enforces narrowing. The delegate payload is arbitrary JSON, and the only validation rejects reserved keys. Attenuation is explicitly deferred to a higher-level profile. |
 | 7 | Self-revocable | No | Only Token Status List on the base credential, which revokes the whole tree at once. Draft section 8.3 acknowledges that an individual holder "can not easily distribute revocation information to Verifiers" and suggests a short `exp` as mitigation. No per-hop revocation and no revoker role. |
 | \+ | Authentication / Proof of Possession | Yes | Key Binding JWT at every hop, with `aud` and `nonce` binding at presentation. Not a bearer format. |
-| \+ | Offline-capable | Delegation yes; verification depends on key resolution | Delegation is a local signing act with no callback to the issuer. Verification is offline only when the root key resolves without network access (for example did:key or a cached resolution). |
 
 #### Placement relative to the survey
 
-Against the merged scorecard, dSD-JWT scores well on exactly the rows where the certificate capability family scores well (chainability, proof of possession, offline delegation) and poorly on the rows that make that family a capability system (attenuation, resource and action model, policy vocabulary, revocation below the root). Two features are novel relative to the surveyed specs:
+Against the merged scorecard, dSD-JWT scores well on exactly the rows where the certificate capability family scores well (chainability, proof of possession), shares its no-round-trip delegation, and scores poorly on the rows that make that family a capability system (attenuation, resource and action model, policy vocabulary, revocation below the root). Two features are novel relative to the surveyed specs:
 
 * Selective disclosure in the chain. A delegatee can hold several pre-signed alternatives and disclose only the one it uses. This is the closest any surveyed artifact comes to hiding chain interiors from a verifier, although it hides alternative payloads rather than intermediate parties (see Delegation Chain Privacy Considerations in the Introduction).  
 * An explicit statement of the holder-side revocation problem (Gap 4). The draft's security considerations state directly that a holder, unlike an issuer, has no channel to distribute revocation, and fall back to short expiry. This is the offline-revocation gap named from the delegator's side.
