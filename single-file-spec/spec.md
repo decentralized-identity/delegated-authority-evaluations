@@ -1132,3 +1132,51 @@ Against the merged scorecard, dSD-JWT scores well on exactly the rows where the 
 * An explicit statement of the holder-side revocation problem (Gap 5). The draft's security considerations state directly that a holder, unlike an issuer, has no channel to distribute revocation, and fall back to short expiry. This is the offline-revocation gap named from the delegator's side.
 
 If a profile for agentic delegation were layered on dSD-JWT, it would need to supply a resource and action vocabulary, an attenuation rule checked by the verifier at each hop, and a per-hop revocation mechanism. Those are the same items the Gaps list assigns to the certificate capability family, which suggests dSD-JWT is better understood as an alternative envelope for that family's semantics than as a competing model. Its main attractions over the DID-native envelopes are its fit with existing SD-JWT VC wallets and its inherited selective disclosure.
+
+### AuthZed/SpiceDB
+
+#### Overview
+
+AuthZed is an open-source framework for governing data planes via a "ReBAC" (Relationship-based Access Control) data store called SpiceDB, best understood as a directed relationship graph fit for complex graph-aware queries and wrapping simpler access control lists.
+SpiceDB is, in turn, a kind of community-fork or open-source alternative to Google's internal Zanzibar system, powering the authorization of Google's many diverse integrated systems (GMail, Gdrive, Google Cloud IAM, and Youtube, for example), based on the original Zanzibar whitepaper.
+It replaces simple access-control lists with a just-in-time and relationship-aware access-control graph.
+
+While SpiceDB can still categorized as an "access control list", its design goals were to be a superset of many different simpler access lists, and capable of expressing complex relationships and queries (like inheritance, tombstoning, etc) _across_ those multiple data models.
+This "meta" relationship is crucial to the enterprise sales pitch, in that by being a flexible layer on top of heterogenous authorization and identity systems, it can abstract and reason over multiple of them in an enterprise context where data governance and relationships comes (inflexibly) along with the data of customers and partners.
+It centralizes into one permissioning engine a complex and configurable layering of multiple access control lists, and allows for graph queries to performantly be executed over that centralized mega-datastore.
+
+It is particularly noteworthy as an alternative to conventional ACLs for use in agentic systems because of [OpenAI publicly using and championing it](https://authzed.com/customers/openai), and for AuthZed's [RAG use case](https://authzed.com/use-cases/ai-retrieval-augmented-generation), whereby data governance inherited from training sets can dynamically be applied in training pipelines and (ideally) even preserved in their outputs.
+
+#### References
+
+* Gates, Carrie, [Access Control Requirements for Web 2.0 Security and Privacy](https://www.researchgate.net/profile/Carrie-Gates-2/publication/240787391_Access_Control_Requirements_for_Web_20_Security_and_Privacy/links/540e6f670cf2d8daaacd4adf/Access-Control-Requirements-for-Web-20-Security-and-Privacy.pdf), 2006.
+* [Explainer for SpiceDB relationship syntax](https://authzed.com/docs/spicedb/concepts/relationships#relationship-syntax)
+* [Explainer for SpiceDB relationship-caveat syntax](https://authzed.com/docs/spicedb/concepts/caveats#writing-relationships-with-caveats-and-context)
+
+#### Scorecard
+
+| \# | Requirement | dSD-JWT | Notes |
+| ----- | ----- | ----- | ----- |
+| 1 | Accountable (agent vs. principal/operator) | Partial | Agent<>principal relationships CAN be encoded in SpiceDB, but this is more of a userspace/configuration option than an explicit, first-order distinction |
+| 2 | Resistant to confused deputy | No | Arguably, a richer vocabulary for authentication-based decisions and a centralized ACL just incentivizes impersonation or credential-sharing further, and makes them harder to detect from the (cross-service) logs and behaviors observed. |
+| 3 | Represent authorization policies | Yes | Caveats can be imposed on permissions, or on the underlying relationships themselves, in an AuthZed-specific DSL. No advisory tier for these. |
+| 4 | Chainable | Partial | No direct or explicit chaining of permissions, although permissions can be delegated to groups whose members change (and new members can add new members in turn) so something like chainable permissions can be effected implicitly. |
+| 5 | Cross-organizational / locally verifiable | No | Delegation and invocation both require live access to the authoritative SpiceDB server. |
+| 6 | Attenuated | Partial | Caveats expressable in the AuthZed DSL can be added each time permissions get assigned/"delegated", but these can also be removed (i.e. the total permissions escalated) by later hops as well. |
+| 7 | Self-revocable | No | User can be permissioned to remove themselves from groups, but this has no effect on, e.g., other members they added to those groups. |
+| \+ | Authentication / Proof of Possession | Partial | How actors are authenticated to their corresponding entries in the SpiceDB directory is out-of-scope of the specification, can be possesion-based or not. |
+| \+ | Privacy of delegation chain | Partial | Permissioning history/chains can be kept private from the permissioned actors, but all permissioning and delegation has to be visible to the resource servers and/or the SpiceDB directory |
+| \+ | Offline-capable | No | Live connection to SpiceDB directory required. |
+
+
+#### Placement relative to the survey
+
+AuthZed/Zanzibar-based approached are mentioned here not because they _are_ an authority-chaining system, but because it could easily be mistaken for one (or sold as one) using a definition of delegation other than that used in this paper.
+Since all authorization decisions are made relative to a relationship graph, adding relationships or adding members to collections could be called a "delegation" of authority (from the collection to the new member, or from one end of the new relationship to the other).
+That said, while capability-certificate systems make very **explicit** (and atomic) the delegation of authority, "delegation" by updating a relationship graph is exactly the opposite: implicit and easily incurring side-effects for OTHER authorities or permission-sets, far from atomic except where heavily caveated.
+As one of the guiding design goals of this report has been minimizing "ambient authority" (and thus confused-deputy potential), it is worth noting that centralizing all authorization decisions to a _single_ relationship graph governed independently of all the permissions and resources scoped more narrowly than that graph might well be the penultimate "ambient authority" situation!
+
+While the _identities_ against which authorization decisions are made (and against which actors are authenticated) are strictly pegged to the SpiceDB layer, the delegations and permissions themselves (encoded in the AuthZed layer) _do_ allow rich and expressive caveats.
+The fairly expressive [domain-specific language for caveats](https://authzed.com/docs/spicedb/concepts/caveats#defining-caveats) provided in AuthZed for attenuating permissions (_or for attentuating [the relationships themselves](https://authzed.com/docs/spicedb/concepts/caveats#allowing-caveats-on-relations)!_) puts the attenuation logic closer to the delegation than many of the other protocols we've evaluated here, and allows these attenuations to travel across the systems unified by the overarching ReBAC abstraction.
+
+The scorecard was not added as a column to the major comparison chart earlier because there are already so many other columns representing extensions to the ACL+OAuth model, but this section was added for the sake of completeness.
