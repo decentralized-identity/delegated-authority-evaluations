@@ -1139,9 +1139,6 @@ It is particularly noteworthy as an alternative to conventional ACLs for use in 
 | 6 | Attenuated | Partial | Caveats expressable in the AuthZed DSL can be added each time permissions get assigned/"delegated", but these can also be removed (i.e. the total permissions escalated) by later hops as well. |
 | 7 | Self-revocable | No | User can be permissioned to remove themselves from groups, but this has no effect on, e.g., other members they added to those groups. |
 | \+ | Authentication / Proof of Possession | Partial | How actors are authenticated to their corresponding entries in the SpiceDB directory is out-of-scope of the specification, can be possesion-based or not. |
-| \+ | Privacy of delegation chain | Partial | Permissioning history/chains can be kept private from the permissioned actors, but all permissioning and delegation has to be visible to the resource servers and/or the SpiceDB directory |
-| \+ | Offline-capable | No | Live connection to SpiceDB directory required. |
-
 
 #### Placement relative to the survey
 
