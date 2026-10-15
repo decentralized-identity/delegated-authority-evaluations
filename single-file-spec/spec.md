@@ -1111,13 +1111,13 @@ If a profile for agentic delegation were layered on dSD-JWT, it would need to su
 
 #### Overview
 
-AuthZed is an open-source framework for governing data planes via a "ReBAC" (Relationship-based Access Control) data store called SpiceDB, best understood as a directed relationship graph fit for complex graph-aware queries and wrapping simpler access control lists.
+AuthZed is an open-source permissions system that enforces access decisions at request time across an organization's data stores, backed by a "ReBAC" (Relationship-based Access Control) data store called SpiceDB, best understood as a directed relationship graph fit for complex graph-aware queries and wrapping simpler access control lists.
 SpiceDB is, in turn, a kind of community-fork or open-source alternative to Google's internal Zanzibar system, powering the authorization of Google's many diverse integrated systems (GMail, Gdrive, Google Cloud IAM, and Youtube, for example), based on the original Zanzibar whitepaper.
 It replaces simple access-control lists with a just-in-time and relationship-aware access-control graph.
 
-While SpiceDB can still categorized as an "access control list", its design goals were to be a superset of many different simpler access lists, and capable of expressing complex relationships and queries (like inheritance, tombstoning, etc) _across_ those multiple data models.
+While SpiceDB can still be categorized as an "access control list", its design goals were to be a superset of many different simpler access lists, and capable of expressing complex relationships and queries (like inheritance, tombstoning, etc) _across_ those multiple data models.
 This "meta" relationship is crucial to the enterprise sales pitch, in that by being a flexible layer on top of heterogenous authorization and identity systems, it can abstract and reason over multiple of them in an enterprise context where data governance and relationships comes (inflexibly) along with the data of customers and partners.
-It centralizes into one permissioning engine a complex and configurable layering of multiple access control lists, and allows for graph queries to performantly be executed over that centralized mega-datastore.
+It combines many separate access control lists into a single configurable permissions engine, so that graph queries can be run efficiently over one central store.
 
 It is particularly noteworthy as an alternative to conventional ACLs for use in agentic systems because of [OpenAI publicly using and championing it](https://authzed.com/customers/openai), and for AuthZed's [RAG use case](https://authzed.com/use-cases/ai-retrieval-augmented-generation), whereby data governance inherited from training sets can dynamically be applied in training pipelines and (ideally) even preserved in their outputs.
 
