@@ -301,6 +301,22 @@ In production today, almost all systems are using OAuth 2.0, hardened to RFC 970
 
 AAuth, meanwhile, isn't a future version of OAuth at all. It's a parallel, signature-based protocol built because its author judged some core assumptions of the OAuth model itself a poor match for autonomous agents. AAuth, however, pushes complexity and risk into a fiduciary agent. This super-agent manages delegations, token-swaps, and other intermediary security and trust decisions. While AAuth ceremonies are different than those in OAuth, most of the token formats are lifted directly from OAuth, making it more of a logical variant than a complete overhaul of OAuth. UCAN/zCAP-LD remain the only one of the three with native, offline, multi-hop delegation (the credential-based dSD-JWT draft in the Appendix shares that property) \-- the clearest architectural line separating capability systems from the many HTTP Servers defining both the OAuth lineage and its AAuth variant (which adds a third Server).
 
+### Implementations and Status
+
+#### Current implementations
+
+OAuth 2.0 is the most widely deployed authorization protocol in existence. Every major identity provider runs it, open-source authorization servers such as Keycloak, ORY Hydra, ZITADEL, Authentik, and Spring Authorization Server implement it, and client libraries exist in some thirty languages (see the [oauth.net code page](https://oauth.net/code/)). No OAuth 2.1 conformance program exists yet. The clearest early adopter of 2.1 as such is the [Model Context Protocol authorization specification](https://modelcontextprotocol.io/specification/draft/basic/authorization), which requires authorization servers to implement OAuth 2.1 and so pulls the MCP SDKs along with it. As the Closing Note observes, an RFC 9700 compliant 2.0 deployment is already close to 2.1 in practice. AAuth implementations are listed in its own chapter.
+
+#### Where the work happens
+
+The [IETF OAuth Working Group](https://datatracker.ietf.org/wg/oauth/about/), in the Security Area. Discussion takes place on the [oauth@ietf.org mailing list](https://mailarchive.ietf.org/arch/browse/oauth/) and the [OAuth Zulip stream](https://zulip.ietf.org/#narrow/stream/oauth), and the OAuth 2.1 draft is edited on [GitHub](https://github.com/oauth-wg/oauth-v2-1). The working group's current milestone is to submit OAuth 2.1 to the IESG in December 2026.
+
+#### Last published version
+
+* RFC 6749 and RFC 6750 (OAuth 2.0): October 2012.
+* RFC 9700 (Best Current Practice for OAuth 2.0 Security, BCP 240): January 2025.
+* OAuth 2.1: [draft-ietf-oauth-v2-1-16](https://datatracker.ietf.org/doc/draft-ietf-oauth-v2-1/), September 2026. The draft has been revised roughly twice a year since 2020.
+
 ## AAuth Evaluation
 
 ### Overview
@@ -516,11 +532,26 @@ This architectural choice intentionally separates authenticated execution from h
 
 Accordingly, AAuth is best understood as a server-mediated delegation and execution framework. It provides authenticated execution, delegation continuity, and mission coordination while allowing complementary policy and governance architectures to determine whether delegated authority remains valid as mission context, organizational policy, and authority state evolve.
 
+### Implementations and Status
+
+#### Current implementations
+
+The [aauth.dev](https://aauth.dev/) project site and the specification repository list a TypeScript SDK ([aauth-dev/packages-js](https://github.com/aauth-dev/packages-js)), Go and Python libraries, .NET samples, a Keycloak extension that adds AAuth to an existing identity provider, a reference Person Server, an Envoy ext-authz resource adapter, and several demos and explorer tools. A third-party [end-to-end demo](https://github.com/christian-posta/aauth-full-demo) pairs AAuth with A2A and Keycloak. All of these are maintained by or around the draft's author, and no independent production deployment was found for this report.
+
+#### Where the work happens
+
+AAuth is an individual Internet-Draft by Dick Hardt (Hello, hello.coop). Despite the "oauth" in its draft name, it is not an OAuth Working Group document and has not been adopted by any IETF working group. The companion Signature-Key draft went through a call for adoption in the HTTP Working Group in February 2026; in September 2026 the chairs recorded that the group had no consensus to adopt it. Day-to-day work happens in the [dickhardt/AAuth](https://github.com/dickhardt/AAuth) repository (issues and pull requests), an #aauth channel on the IETF Slack, a community Slack, and regular office hours, all linked from the project site.
+
+#### Last published version
+
+* Protocol: [draft-hardt-oauth-aauth-protocol-11](https://datatracker.ietf.org/doc/draft-hardt-oauth-aauth-protocol/), 25 September 2026. This chapter evaluates -10 (6 August 2026). The draft has been revised eleven times since April 2026, roughly every two to four weeks, and -11 is a substantial restructure: it removes the `act` claim in favor of a Person Server-held delegation record, adds a person token and a fifth access mode, adds a Supervisor role, and reworks revocation into a cascading model. Re-evaluating against -11 is left for a future revision of this report.
+* Signature-Key: [draft-hardt-httpbis-signature-key-09](https://datatracker.ietf.org/doc/draft-hardt-httpbis-signature-key/), 13 September 2026. This chapter cites -08.
+
 ## Certificate Capabilities Evaluation (zCaps, UCANs, and KYA-OS)
 
 ### Overview
 
-Three of the specifications in this survey are realizations of the same underlying model, and this chapter evaluates them together. Authorization Capabilities ("zCaps", standardized in draft as [Authorization Capabilities v0.3](https://w3c-ccg.github.io/zcap-spec/)) and the [User-Controlled Authorization Network](https://ucan.xyz/) ("UCANs") are both certificate capability systems: the authorization is a structured, cryptographically signed artifact that a delegator hands to a delegatee, carrying within itself everything a verifier needs to check it. Both descend from the [object-capability](https://en.wikipedia.org/wiki/Object-capability_model) tradition (UCAN cites [SPKI](https://en.wikipedia.org/wiki/Simple_public-key_infrastructure) as its direct ancestor), and both make the same core design choice: access is decided by possession ("do you hold a valid capability, and can you prove control of its key?") rather than by identity ("who are you, and what does my policy store say about you?"). A fourth artifact of the same general kind, the credential-based dSD-JWT draft, is covered in the Appendix.
+Three of the specifications in this survey are realizations of the same underlying model, and this chapter evaluates them together. Authorization Capabilities ("zCaps", standardized in draft as [Authorization Capabilities v0.4.0](https://w3c-ccg.github.io/zcap-spec/v0.4.0/)) and the [User-Controlled Authorization Network](https://ucan.xyz/) ("UCANs") are both certificate capability systems: the authorization is a structured, cryptographically signed artifact that a delegator hands to a delegatee, carrying within itself everything a verifier needs to check it. Both descend from the [object-capability](https://en.wikipedia.org/wiki/Object-capability_model) tradition (UCAN cites [SPKI](https://en.wikipedia.org/wiki/Simple_public-key_infrastructure) as its direct ancestor), and both make the same core design choice: access is decided by possession ("do you hold a valid capability, and can you prove control of its key?") rather than by identity ("who are you, and what does my policy store say about you?"). A fourth artifact of the same general kind, the credential-based dSD-JWT draft, is covered in the Appendix.
 
 The third, [KYA-OS](https://github.com/decentralized-identity/kya-os-mcp) (Know Your Agent Operating System, a DIF Trusted AI Agents Working Group specification with a Model Context Protocol binding), can be thought of as an extended profile of zCaps. Its delegation credential is a W3C Verifiable Credential 2.0 whose `credentialSubject` is an attenuated ZCAP-LD capability, carried one credential per delegation hop. Around that delegation core KYA-OS adds what the other two leave to companion layers:
 
@@ -538,7 +569,7 @@ Because the three specs score as a family against the evaluation checklist, the 
 
 Reference points used in this evaluation:
 
-* the [ZCAP v0.3 specification](https://w3c-ccg.github.io/zcap-spec/) (the data model), and the [zCap Developer's Guide](https://github.com/interop-alliance/zcap-developer-guide), which documents the deployed state of the art; where deployment has diverged from the spec text (most notably: typed caveat objects are largely unused in production, replaced by URL-suffix attenuation, allowedAction, and expires), this is called out explicitly;  
+* the [zCap v0.4.0 specification](https://w3c-ccg.github.io/zcap-spec/v0.4.0/) (the data model), and the [zCap Developer's Guide](https://github.com/interop-alliance/zcap-developer-guide), which documents the deployed state of the art; where deployment has diverged from the spec text (most notably: typed caveat objects are largely unused in production, replaced by URL-suffix attenuation, allowedAction, and expires), this is called out explicitly;  
 * the [UCAN specification set](https://ucan.xyz/specification/): the overview plus the Delegation, Invocation, and Revocation sub-specs. (The Promise sub-spec is skipped as still marked draft.)  
 * the [KYA-OS protocol specification](https://www.kya-os.org/mcp/introduction) (version 1.0.0, in particular the delegation chapter and its VC 2.0 plus ZCAP-LD profile), the KYA-OS Entity Card specification (the per-request proof, the delegation join, and the verification algorithm), the published JSON Schema for the delegation credential, and the reference implementation's chain evaluator, which is where the attenuation rules are actually enforced.
 
@@ -759,6 +790,28 @@ zCaps and UCAN are two realizations of the same certificate-capability model, an
 KYA-OS moves two verdicts in opposite directions. It is the only surveyed specification that scores Yes on accountability, because it names and recomputes a Responsible Party and types every principal, which is exactly the companion identity layer the other two chapters say the family needs. It pays for that with a Partial on local verifiability, because the chain is resolved from a registry rather than carried, and a Partial on self-revocation, because the holder of a delegation cannot revoke it. Whether those costs are inherent to the identity layer or only to the choice of carrying it in Verifiable Credentials is the question the next chapter takes up.
 
 The differences among the three are real but sit a level down, in encoding and ecosystem rather than capability model: JSON-LD and Data Integrity on the web-standards stack, DAG-CBOR and CIDs on the content-addressed local-first stack, VC 2.0 and status lists on the credential stack; normative chain embedding versus resolvable proof stores versus a registry locator; URL narrowing versus a command lattice versus a fixed target; an RS revocation endpoint versus a revocation command versus a status list. For delegated authorization for AI agents, choosing among them is largely a deployment-ecosystem decision; the properties that matter for the agentic checklist, and the work still needed, are common to all three.
+
+### Implementations and Status
+
+#### Current implementations
+
+zCaps. The reference implementation is Digital Bazaar's JavaScript library family: [@digitalbazaar/zcap](https://github.com/digitalbazaar/zcap) for delegation and verification, [@digitalbazaar/ezcap](https://github.com/digitalbazaar/ezcap) for clients, and [@digitalbazaar/ezcap-express](https://github.com/digitalbazaar/ezcap-express) for servers, all with releases in September 2026. Interop Alliance maintains forks of the first two as [@interop/zcap](https://github.com/interop-alliance/zcap) and @interop/ezcap (October 2026). SpruceID's Rust `ssi` toolkit includes a `ssi-zcap-ld` crate (February 2026). zCaps are the authorization layer of the Encrypted Data Vault, WebKMS, and [Wallet Attached Storage](https://github.com/w3c-ccg/wallet-attached-storage-spec) specifications and of the Digital Bazaar production stack built on them. The [zCap Developer's Guide](https://github.com/interop-alliance/zcap-developer-guide) documents the deployed conventions.
+
+UCAN. The working group's own libraries are [go-ucan](https://github.com/ucan-wg/go-ucan) (v1.2.0, September 2026) and [rs-ucan](https://github.com/ucan-wg/rs-ucan) (Rust, tracking the 1.0 release candidates). [ucanto](https://github.com/storacha/ucanto) is Storacha's (formerly web3.storage) TypeScript RPC framework built on UCAN and is the largest production deployment. The older [ts-ucan](https://github.com/ucan-wg/ts-ucan) and Fission libraries implement the pre-1.0 specification and are no longer updated. SpruceID also ships a `ssi-ucan` crate. The working group does not publish which libraries implement the final 1.0 text as opposed to a release candidate.
+
+KYA-OS. The specification repository doubles as the TypeScript reference implementation, published as [@kya-os/mcp](https://www.npmjs.com/package/@kya-os/mcp) (1.20.0, October 2026) with companion CLI, contracts, and project-template packages. The repository lists a single maintainer. No independent second implementation and no public production deployment were found for this report.
+
+#### Where the work happens
+
+* zCaps: a [W3C Credentials Community Group](https://www.w3.org/community/credentials/) work item, edited in [w3c-ccg/zcap-spec](https://github.com/w3c-ccg/zcap-spec) and discussed on the CCG mailing list and weekly calls.
+* UCAN: the [UCAN Working Group](https://github.com/ucan-wg) on GitHub, which is not under a standards body. Each sub-spec has its own repository, the main spec repository has Discussions enabled, and there is a [Discord](https://discord.gg/zSfgeHhKxA) linked from [ucan.xyz](https://ucan.xyz/).
+* KYA-OS: the [DIF Trusted AI Agents Working Group](https://identity.foundation/working-groups/trusted-agents.html), with a [mailing list](https://lists.identity.foundation/g/taawg), the DIF Slack channel #wg-trusted-ai-agents, and a weekly KYA-OS Task Force call. Changes land in [kya-os-mcp](https://github.com/decentralized-identity/kya-os-mcp) by lazy consensus, with a vote for breaking changes.
+
+#### Last published version
+
+* zCaps: [v0.4.0](https://w3c-ccg.github.io/zcap-spec/v0.4.0/), October 2026, a Community Group Draft. v0.3.0 was released in September 2026. The 0.4.0 changes are editorial relative to 0.3: the title drops "for Linked Data", the examples switch to Data Integrity proofs and gain `expires`, and the capabilityChain requirement on delegation proofs is stated explicitly.
+* UCAN: the core, Delegation, and Invocation specifications reached v1.0.0 in July 2026. The Revocation sub-spec remains at v1.0.0-rc.1, last changed in July 2025, and the Promise sub-spec is a draft.
+* KYA-OS: protocol specification 1.0.0, marked Stable, last edited October 2026. Repository releases (v1.20.0, October 2026) track the implementation rather than the specification text.
 
 ## Modeling Chained Delegation with W3C VCs
 
@@ -1015,6 +1068,20 @@ Cedar is, almost row by row, the complement of the capability-based technologies
 
 For delegated authorization for AI agents, the implication is that Cedar is not a candidate *delegation data model* but a strong candidate component beside one, in two distinct roles. The first is to express the caveats carried in a capability chain and to guarantee, by offline analysis, that no delegation relaxes the caveats of its parent. The second is to decide, at the root of a chain, which capabilities a resource owner should hand to which authenticated principal. In both roles a carrier technology supplies the chain, proof and portability, while Cedar supplies the rulebook, with the unusual bonus that those rules can be formally analyzed. The Cedarling deployment shows the integration pattern already in production form (policies travel to the edge, identity evidence travels as multi-issuer JWTs, decisions stay local), and the Clawdrey case study shows the agentic pattern (operator-authored Cedar policies as the hard boundary on an autonomous agent's action space). What no current Cedar deployment shows is the missing piece the checklist cares most about: a standardized way for a delegator to hand a delegatee a portable, attenuated, chain-verifiable grant.
 
+### Implementations and Status
+
+#### Current implementations
+
+The reference engine is the Rust [cedar-policy](https://github.com/cedar-policy/cedar) crate (4.13.0, September 2026). Official siblings are cedar-java (JNI bindings), [cedar-go](https://github.com/cedar-policy/cedar-go) (a native Go port, 1.8.0, June 2026), @cedar-policy/cedar-wasm, the cedar-policy-symcc SMT analyzer, a Kubernetes authorizer, and an Express.js middleware. Products built on it include Amazon Verified Permissions, Janssen Cedarling (v2.5.0, October 2026, with WASM, Python, Java, Go, C, iOS, and Android bindings plus sidecar and gateway deployments), and Permit.io's cedar-agent. Adopters named in the CNCF application include Cloudflare, MongoDB, StrongDM, and Cloudinary. The Clawdrey Hepburn case study above is an agentic deployment.
+
+#### Where the work happens
+
+Cedar has been a [CNCF Sandbox project](https://www.cncf.io/projects/cedar/) since October 2025, with AWS as the primary sponsor. Development is in the [cedar-policy GitHub organization](https://github.com/cedar-policy), language changes go through the [RFCs repository](https://github.com/cedar-policy/rfcs), and a monthly community meeting is recorded in [cedar-community](https://github.com/cedar-policy/cedar-community). Cedarling is developed by the [Janssen Project](https://github.com/JanssenProject/jans) under the Linux Foundation, with Gluu as lead contributor, and is discussed in that repository's GitHub Discussions and the Gluu chat.
+
+#### Last published version
+
+Cedar is versioned as a language rather than as a specification document. The current language version is 4.5, April 2026, implemented by SDK releases 4.10.0 through 4.13.0 (September 2026). There is no standalone versioned specification; the normative references are the [documentation site](https://docs.cedarpolicy.com/) and the Lean formalization in [cedar-spec](https://github.com/cedar-policy/cedar-spec), which is actively maintained. Cedarling's latest release is Janssen v2.5.0, October 2026.
+
 ### References
 
 #### Cedar language and engine
@@ -1200,6 +1267,22 @@ However, AuthZEN is not a delegated-authority system. Delegation semantics, incl
 Put plainly, AuthZEN on its own is an ambient authority framework. A PDP answers from the subject's standing permissions, and nothing in the protocol binds the caller's designation of a resource to the authority used. It should not be the sole basis for access decisions in a delegation stack. Its appropriate roles are deciding which capabilities to hand out to an authenticated principal, and serving as the internal decision interface of a resource's own verifier.
 
 Understanding these boundaries is important when comparing AuthZEN with policy frameworks such as Cedar and delegation-focused approaches such as UCAN and zCAP.
+
+### Implementations and Status
+
+#### Current implementations
+
+The [AuthZEN interop site](https://authzen-interop.net/) publishes results for the Core specification. PDPs passing the Todo scenario include Amazon Verified Permissions, Aserto Topaz, Axiomatics, Cerbos, EmpowerID, Hexa, IndyKite, Apache KIE (Kogito), OPA, OpenFGA, Permit.io, Ping, PlainID, Rock Solid Knowledge, SGNL, and WSO2, with 3Edges and AuthZForce also listed. Subsets of those pass the API gateway, IdP, and Search scenarios. The [interop repository](https://github.com/openid/authzen/tree/main/interop) carries PEP harnesses for AWS API Gateway, Envoy (ext_authz), Kong, Tyk, and Zuplo. Janssen Cedarling exposes an AuthZEN endpoint in its sidecar but has no published interop results. Implementations of the COAZ drafts were not surveyed for this report.
+
+#### Where the work happens
+
+The [OpenID Foundation AuthZEN Working Group](https://openid.net/wg/authzen/), with a [mailing list](https://lists.openid.net/mailman/listinfo/openid-specs-authzen), a weekly Thursday call, the OpenID Foundation Slack, and the [openid/authzen](https://github.com/openid/authzen) repository, which also holds meeting notes. Contributing to specification text requires an OpenID Foundation IPR contribution agreement. A conformance certification program for the Authorization API is in development. The Policy Store draft is an individual draft in a personal repository of its Gluu authors and has not been adopted by the working group.
+
+#### Last published version
+
+* Authorization API 1.0: Final Specification, approved January 2026 (the document is dated 11 January 2026).
+* COAZ framework and COAZ-MCP binding: Draft 1, dated February 2026. Both sources received substantive edits through August 2026 without the document date being bumped, so the published HTML is newer than its date suggests.
+* Policy Store Format: an unnumbered individual draft, first committed May 2026 and still being edited in October 2026.
 
 ### References
 
@@ -1467,6 +1550,10 @@ Against the merged scorecard, dSD-JWT scores well on exactly the rows where the 
 
 If a profile for agentic delegation were layered on dSD-JWT, it would need to supply a resource and action vocabulary, an attenuation rule checked by the verifier at each hop, and a per-hop revocation mechanism. Those are the same items the Gaps list in the Synthesis chapter assigns to the certificate capability family, which suggests dSD-JWT is better understood as an alternative envelope for that family's semantics than as a competing model. Its main attractions over the DID-native envelopes are its fit with existing SD-JWT VC wallets and its inherited selective disclosure. The chapter Modeling Chained Delegation with W3C VCs sets out what such a profile would have to add, and compares dSD-JWT with KYA-OS, the other surveyed design that carries delegation in a credential.
 
+#### Implementations and status
+
+The only implementation found is the [equs-credentials-sdk](https://github.com/equs-ai/equs-credentials-sdk), a Rust core with Node, WASM, Kotlin, and Swift wrappers, where dSD-JWT is marked experimental and gated behind a Cargo feature. The draft is an individual Internet-Draft by Gareth Oliver (Google), discussed on the IETF OAuth Working Group mailing list but not adopted by the group, and no public repository for the text was found. The current and only revision is [draft-gco-oauth-delegate-sd-jwt-00](https://datatracker.ietf.org/doc/draft-gco-oauth-delegate-sd-jwt/), April 2026. It expires on 23 October 2026, so unless a -01 revision appears the draft will lapse shortly after this report.
+
 ### AuthZed/SpiceDB
 
 #### Overview
@@ -1534,6 +1621,12 @@ While the _identities_ against which authorization decisions are made (and again
 The fairly expressive [domain-specific language for caveats](https://authzed.com/docs/spicedb/concepts/caveats#defining-caveats) provided in AuthZed for attenuating permissions (_or for attentuating [the relationships themselves](https://authzed.com/docs/spicedb/concepts/caveats#allowing-caveats-on-relations)!_) puts the attenuation logic closer to the delegation than many of the other protocols we've evaluated here, and allows these attenuations to travel across the systems unified by the overarching ReBAC abstraction.
 
 AuthZed was not added to the merged scorecard in the Synthesis chapter because that scorecard already covers so many extensions to the ACL+OAuth model, but this section was added for the sake of completeness.
+
+#### Implementations and status
+
+SpiceDB itself is the implementation: a Go server under Apache 2.0, at [v1.56.2](https://github.com/authzed/spicedb/releases) as of September 2026, with the `zed` CLI and official client libraries for Go, Node, Python, Java, Ruby, and .NET, and a hosted offering (AuthZed Cloud and AuthZed Dedicated). Public deployments named by AuthZed include OpenAI (for ChatGPT's document connectors), Zoom, Workday, Netflix, Redpanda, and Turo. Other Zanzibar-derived systems in the same family are [OpenFGA](https://github.com/openfga/openfga) (a CNCF Incubating project since October 2025), [Ory Keto](https://github.com/ory/keto), [Permify](https://github.com/Permify/permify), and [Warrant](https://github.com/warrant-dev/warrant).
+
+Development is company-led by AuthZed Inc. in the [authzed GitHub organization](https://github.com/authzed), with a [Discord](https://authzed.com/discord) for discussion. It is not a standards-body project and there is no specification document. The de facto specification is the [schema language documentation](https://authzed.com/docs/spicedb/concepts/schema), versioned only through SpiceDB releases, and the [v1 API protobuf definitions](https://github.com/authzed/api) (v1.57.0, September 2026). The design derives from the Zanzibar paper presented at USENIX ATC in July 2019.
 
 ### Relationship to Stiegler's Seven Aspects of Sharing
 
