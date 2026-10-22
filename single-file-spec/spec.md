@@ -44,12 +44,12 @@ To address the problem of Agentic authorization and delegation holistically, we 
 
 * Data model: how the various mandatory and optional data elements of an authorization get expressed.  
 * Protocol: how tokens are requested, presented, and (optionally) revoked.  
-* Proof of Possession mechanism: how tokens are secured against replay attacks, most commonly through some proof of possession of keys or other cryptographic material.  
+* Proof of Possession mechanism: how tokens are secured against theft and replay, most commonly through some proof of possession of keys or other cryptographic material.  
 * Chainable proof methods: how a multi-hop chain of delegations is expressed and verified.
 
 Delegation is central to the problem of agentic authorization because the only alternative to delegation is impersonation. Delegation can be done without capabilities, using identity-based (authentication-centric) systems, but that entails some degree of ambient authority, which opens the door to “confused deputy” attacks, whereby too much faith is placed in fallible (or second-hand) authentication. Cedar and similar systems illustrate the point: they support more flexible delegation while remaining identity-based, so they remain subject to the confused deputy problem, and they also place policy evaluation on the critical path of every request, incentivizing attacks on the identity layer rather than the policy layer. The same applies one layer down, at the decision protocol. AuthZEN standardizes how an enforcement point asks a policy decision point for a verdict, but the authority consulted still lives at that server and its trust model is still based on  identity.
 
-A quick note on the [confused deputy](https://en.wikipedia.org/wiki/Confused_deputy_problem) problem, which was central to our motivation and inquiry here. Typically, people refer to the slippage between logged identities and actual-executing, actually-liable parties as a confused-deputy situation, but we took a more existential approach: we think of impersonation and credential-sharing and exceptions to rigid logging or access policies as invitations, which make authentication and credential data the weakest links. Agents are nothing if not expert weakest-link finders! To remove the possibility of confused deputies, designation and authorization must be combined, explicitly stating which actions are allowed to be performed on which resource, verb, or API endpoint, rather than leaving that to be solved indirect via authentication and policy. This combination is definitive of a family of approaches generally grouped under the category of "capability systems", explicitly formalizing capabilities, as opposed to systems relying on ambient authority (e.g. assigning authority by identity and/or role).
+A quick note on the [confused deputy](https://en.wikipedia.org/wiki/Confused_deputy_problem) problem, which was central to our motivation and inquiry here. Typically, people refer to the slippage between logged identities and actual-executing, actually-liable parties as a confused-deputy situation, but we took a more existential approach: we think of impersonation and credential-sharing and exceptions to rigid logging or access policies as invitations, which make authentication and credential data the weakest links. Agents are nothing if not expert weakest-link finders! To remove the possibility of confused deputies, designation and authorization must be combined, explicitly stating which actions are allowed to be performed on which resource, verb, or API endpoint, rather than leaving that to be solved indirectly via authentication and policy. This combination is definitive of a family of approaches generally grouped under the category of "capability systems", explicitly formalizing capabilities, as opposed to systems relying on ambient authority (e.g. assigning authority by identity and/or role).
 
 Capability systems can be categorized by which parts of the system do the enforcement. The main types are:
 
@@ -65,36 +65,33 @@ Multi-hop (chainable) delegation is important. Without it, after a "single hop" 
 
 Attenuation, or the ability to delegate a smaller scope of capabilities, is an essential part of the picture. Delegation should enforce the **principle of least privilege**, giving an actor working on your behalf as little privilege (and incurring as little risk) as necessary. When enlisting help from an agent, the user should give it only the minimum permissions necessary to perform the task. Attenuation enforced by the capability system itself prevents escalation attacks, which were less frequent and existential a risk when enterprise-internal systems were only being used by human employees.
 
-Traditional capability systems are intentionally not identity-based, and in many cases can be configured to be almost identity-blind. For agentic use cases, however, it’s important to constrain identifier choices (and maintain any maps or indirections necessary) so as to maximize accountability and logging, *particularly* because agentic use-cases involve so many liable parties, with non-determinism and risk distributed across so many components. Complicating identifier choices and classical best practices are the inherent challenges of cross-domain, cross-organizational identifiers, since agents often perform tasks across different web domains, trust zones, and execution contexts, which may in turn require partial confidentiality or bring their own logging and authentication requirements. Given all of the above, we take the strong stance that bearer tokens are dangerous to use at any layer of such a system, due to the ease of replay attacks and their tendency to appear in logs; luckily, this position is becoming [less controversial](https://www.ietf.org/archive/id/draft-klrc-aiagent-auth-03.html#section-7) over time across the security and identity communities, as more and more research and security incidents indicate the near- or total impossibility of trusting frontier models with such systems.
+Traditional capability systems are intentionally not identity-based, and in many cases can be configured to be almost identity-blind. For agentic use cases, however, it’s important to constrain identifier choices (and maintain any maps or indirections necessary) so as to maximize accountability and logging, *particularly* because agentic use-cases involve so many liable parties, with non-determinism and risk distributed across so many components. Complicating identifier choices and classical best practices are the inherent challenges of cross-domain, cross-organizational identifiers, since agents often perform tasks across different web domains, trust zones, and execution contexts, which may in turn require partial confidentiality or bring their own logging and authentication requirements. Given all of the above, we take the strong stance that bearer tokens are dangerous to use at any layer of such a system. The primary danger is theft. A stolen bearer token is as good as the original, and tokens tend to appear in logs and in agent context windows. Replay of an intercepted token is the secondary risk. Luckily, this position is becoming [less controversial](https://www.ietf.org/archive/id/draft-klrc-aiagent-auth-03.html#section-7) over time across the security and identity communities, as more and more research and security incidents indicate the near- or total impossibility of trusting frontier models with such systems.
 
 ### Specification Evaluation Checklist
 
 In this report we evaluate major authorization and/or access-control specifications that address any of the design questions listed in the Introduction: primarily, we study how delegation is supported by the data models, invocation protocols, and chainable proof methods, but also other aspects of protocol and logging are addressed as well. Validity checks must be done at the time of request (by a component trusted by the resource provider), and there is much room for configuration and profiling across all these systems, but we have focused on the core affordances of these specifications at a high-level.
 
-The assessment criteria largely track Stiegler's seven aspects of sharing (see the [Delegated Authority Problem-space report](https://identity.foundation/delegated-authority-report)), with a few adaptations for spec evaluation. The adaptations are:
-
-* Composability is not listed as a separate criterion, since any capability system satisfies it trivially, so it does not discriminate among the candidates under evaluation;   
-* Functional resistance to confused deputy attacks (item 2\) replaces the more formal composability, as it was proved the more useful rubric, \]  
-* An additional requirement that authorization *policies* be representable (at least by reference) in the specification (item 3), which is a practical necessity in enterprise and large-scale deployments, and  
-* Stiegler's "dynamic" aspect (delegation without undue delay) is not scored as a criterion. It is covered by the per-stage reachability analysis under Offline Use Considerations below.
+The assessment criteria largely track Stiegler's seven aspects of sharing (see the [Delegated Authority Problem-space report](https://identity.foundation/delegated-authority-report)), with a few adaptations for spec evaluation. The adaptations are listed in the Appendix, under [Relationship to Stiegler's Seven Aspects of Sharing](#relationship-to-stieglers-seven-aspects-of-sharing).
 
 For this report, the final list of assessment criteria is:
 
-1. **Accountability:** Specification must allow stable, in-band differentiation between the agent and its principal operator (e.g., natural or legal person)  
-2. **Confused-deputy Resistance:** relative infeasibility of impersonation and authentication attacks,  mostly from reducing “ambient authority.”  
-3. **Representability of authorization policies** (either by embedding or linking to them)   
-   1. This includes **functional policies** like "do not delegate further" or “this permission is non-delegatable”  
-   2. This includes **re-delegation policies** like “only delegate within X boundary or role”  
-   3. "**Please**": A request containing desired rules for redelegating but not refusing to honor violations.   
-   4. "**Disclosure** **governance**": Confidentiality of tokens and logs is not just configurable but governable.  
-4. **Chainability**: Authorization must be able to be delegated: At root, authorization is delegated from principal/operator to agent. But also, agents must be able to delegate to further subsystems or other agents.  
-5. **Cross-organizational execution** (validation checks are independently verifiable, locally verifiable). At minimum, different organizations/groups should be able to express authorization policies without having accounts on each other's IAM systems.  
-6. **Attenuated delegation**: delegation of a subset of permissions as a first-class data element.  
+1. **Attenuated delegation**: delegation of a subset of permissions as a first-class data element.
+2. **Accountability:** Specification must allow stable, in-band differentiation between the agent and its principal operator (e.g., natural or legal person)
+3. **Confused-deputy Resistance:** relative infeasibility of impersonation and authentication attacks,  mostly from reducing “ambient authority.”
+4. **Representability of authorization policies** (either by embedding or linking to them)
+   1. This includes **functional policies** like “only usable during work hours” or “only from this network”
+   2. This includes **re-delegation policies** like “only delegate within X boundary or role”
+   3. "**Please**": A request containing desired rules for redelegating, where violations are not refused. Ideally the delegatee also has a place to record why it did not honor the request.
+   4. "**Disclosure** **governance**": Confidentiality of tokens and logs is not just configurable but governable.
+5. **Chainability**: Authorization must be able to be delegated: At root, authorization is delegated from principal/operator to agent. But also, agents must be able to delegate to further subsystems or other agents.
+6. **Cross-organizational execution** (validation checks are independently verifiable, locally verifiable). At minimum, different organizations/groups should be able to express authorization policies without having accounts on each other's IAM systems.
 7. **Self-revocability:** The capability holder, somebody in the delegation chain, or a holder of an explicit revocation capability, must be able to revoke a delegated permission, modulo network partitions.
+
+A rule of the form "do not delegate further" is deliberately absent from the functional-policy examples. Forbidding re-delegation is widely regarded as an anti-pattern in capability systems. A delegatee can always proxy requests or share its key, so a prohibition only pushes the delegation out of view. The per-spec chapters still report whether such a rule is expressible, because it is frequently requested, but this report does not treat its absence as a shortcoming.
 
 **Not required but nice to have:**
 
-1. **Authentication grounded in first-class, in-band Proof of Possession**
+8. **Authentication grounded in first-class, in-band Proof of Possession** (numbered 8 in the scorecards so that row numbering stays continuous)
 
 Two further nice-to-haves were considered and dropped from the checklist. Privacy of the delegation chain is discussed under Delegation Chain Privacy Considerations below. Offline capability is replaced by a per-stage account of which endpoints must be reachable, under Offline Use Considerations below.
 
@@ -113,9 +110,9 @@ Despite differences in encoding and terminology, the data models under evaluatio
 Alongside these fields, each spec also addresses several mechanisms that sit partly in the data model and partly in the protocol:
 
 * "protocol"—how to request this permission.  
-* "revocation"—how a permission is revoked (mostly protocol, though revocation has a data model aspect as well, such as pointing to where revocation status is checked).  
+* "revocation"—how a permission is revoked. This is mostly protocol, with a small data model aspect, such as where a revoker submits a revocation. Only the verifier needs to know where revocation status is checked.  
 * "invocation" (separate protocol and data model)—how to invoke a permission for a given resource.  
-* cryptographic suites (if applicable)—how to prove cryptographic key possession for delegation and invocation.
+* signature suites—how delegations and invocations are signed, and how key possession is proven. Signing is the only cryptography a delegation system requires. Selective encryption of fields is an optional addition, touched on under Delegation Chain Privacy Considerations below.
 
 
 A table mapping each spec's concrete field names onto this common shape appears in the Synthesis chapter, under Data Model Correspondence.
@@ -134,11 +131,11 @@ Of course, these roles are transitive, and a delegatee becomes in turn the deleg
 
 Earlier drafts of this report listed privacy of the delegation chain as a nice-to-have criterion. The question was whether a system can hide some or all of the delegation data and metadata in the proof chain from the agent or token carrier, and from intermediate counterparties, while the principal and the verifier still know the full story. The criterion was dropped because it does not discriminate among the candidates. The answer is the same for every specification surveyed, and it is settled by architecture rather than by any feature of a given spec.
 
-None of the surveyed specifications encrypts, blinds, or selectively discloses the parties in a delegation chain. Where the chain is a portable artifact (zCaps, UCANs, dSD-JWT), the whole chain reaches the verifier on invocation and is visible to the invoking agent that carries it. UCAN says this directly. Chains are provenance logs, and UCANs do not offer confinement. dSD-JWT inherits selective disclosure from SD-JWT, but that mechanism hides alternative pre-signed payloads, not the hops themselves. Where there is no portable chain (OAuth, AAuth, Cedar, AuthZEN), the delegatee presents only its own token or identity and learns nothing about the rest of the graph. That is only because the graph lives at a server or policy store that sees everything. The Person Server in AAuth and the policy store in Cedar hold whatever delegation history exists, and AuthZEN defines no chain representation at all. Carrier-side privacy in these systems is a side effect of centralization, not a mechanism.
+None of the surveyed specifications encrypts, blinds, or selectively discloses the parties in a delegation chain. Where the chain is a portable artifact (zCaps, UCANs, dSD-JWT), the whole chain reaches the verifier on invocation and is visible to the invoking agent that carries it. UCAN says this directly. Chains are provenance logs, and UCANs do not offer confinement. dSD-JWT inherits selective disclosure from SD-JWT, but that mechanism hides alternative pre-signed payloads, not the hops themselves. Where there is no portable chain (OAuth, AAuth, Cedar, AuthZEN), the delegatee presents only its own token or identity and learns nothing about the rest of the graph. That is only because the graph lives at a server or policy store that sees everything. An OAuth Authorization Server performing Token Exchange, for instance, can record every delegation it brokers; that record is visible to the server and hidden from delegatees. The Person Server in AAuth and the policy store in Cedar hold whatever delegation history exists, and AuthZEN defines no chain representation at all. Carrier-side privacy in these systems is a side effect of centralization, not a mechanism.
 
-In practice this matters less than the original criterion implied. What a chain exposes is a sequence of identifiers and the permissions passed between them. Using ephemeral, pairwise, or one-off identifiers for each delegation provides sufficient privacy of the delegation chain for most agentic use cases. zCaps already use urn:uuid capability identifiers to reduce correlation, and any DID-based system can mint a fresh key per delegation. A verifier or an intermediate agent then sees that a chain exists and that each edge is validly signed, but cannot correlate the parties across chains or link them to a real-world entity. Any additional information about the actors in a chain is stored out of band, as DID document contents, verifiable credentials, or other identifier-anchored metadata, and is disclosed on its own terms. This is compatible with the accountability criterion (item 1). An auditor can resolve pairwise identifiers to responsible parties through that out-of-band layer without the chain itself carrying global identities.
+In practice this matters less than the original criterion implied. What a chain exposes is a sequence of identifiers and the permissions passed between them. Using ephemeral, pairwise, or one-off identifiers for each delegation provides sufficient privacy of the delegation chain for most agentic use cases. zCaps already use urn:uuid capability identifiers to reduce correlation, and any DID-based system can mint a fresh key per delegation. A verifier or an intermediate agent then sees that a chain exists and that each edge is validly signed, but cannot correlate the parties across chains or link them to a real-world entity. Any additional information about the actors in a chain is stored out of band, as DID document contents, verifiable credentials, or other identifier-anchored metadata, and is disclosed on its own terms. This is compatible with the accountability criterion (item 2). An auditor can resolve pairwise identifiers to responsible parties through that out-of-band layer without the chain itself carrying global identities.
 
-Selective disclosure or blinding of chain interiors against the verifier remains an open design problem. The "disclosure governance" sub-item of the policy criterion (item 3) is where a specification would express rules about who may see what. We note chain privacy here as a consideration for future work rather than as an evaluation axis.
+Selective disclosure or blinding of chain interiors against the verifier remains an open design problem. The "disclosure governance" sub-item of the policy criterion (item 4) is where a specification would express rules about who may see what. We note chain privacy here as a consideration for future work rather than as an evaluation axis.
 
 ### Offline Use Considerations
 
@@ -174,7 +171,7 @@ For the local-machine and LAN-only agentic use cases, the practical reading is b
 
 _Hardening, Consolidation, and the Push Toward Autonomous Authorization_
 
-This chapter covers what is actually deployed today—OAuth 2.0 (RFC 6749/6750), as hardened by RFC 9700 (2025 Security Best Current Practice)—then traces the evolution toward OAuth 2.1 and, separately, the independent AAuth draft.
+This chapter covers what is actually deployed today—OAuth 2.0 (RFC 6749/6750), as hardened by RFC 9700 (2025 Security Best Current Practice)—then traces the evolution toward OAuth 2.1. AAuth, a separate draft by an OAuth co-author, is evaluated in the chapter that follows.
 
 Each section below opens with an italicized tag, one of:
 
@@ -187,9 +184,6 @@ Each section below opens with an italicized tag, one of:
 * OAuth 2.1—consolidation draft
 
 
-* AAuth—independent draft
-
-
 These standards clarify the most common solution in use for  Google, Okta, Auth0, GitHub, or a typical enterprise IdP today, versus what's still in development and limited/niche deployments.
 
 ### Overview
@@ -198,11 +192,11 @@ OAuth (Open Authorization) is an open standard for **access delegation** anchore
 
 The standard running in production today—what every major identity provider implements for most clients at scale— is OAuth 2.0: RFC 6749 (the core authorization framework) and RFC 6750 (bearer token usage), both from 2012, with additional security on higher layers. OAuth 2.0 is very much a framework, not a fixed protocol: it deliberately leaves many security-relevant decisions to implementers, architects, and configuration. This flexibility is precisely why a decade of real-world attacks produced a long list of follow-on RFCs tightening specific gaps (PKCE, JWT access tokens, token exchange, sender-constraining, DPoP, and so on).
 
-In January 2025, the IETF published RFC 9700, "Best Current Practice for OAuth 2.0 Security," which consolidates that decade of lessons into concrete guidance: don't use the Implicit grant, don't use Resource Owner Password Credentials, always use PKCE where possible, match redirect URIs exactly, and prefer sender-constrained tokens. RFC 9700 is guidance on top of RFC 6749/6750. It doesn't supersede or deprecate them.
+In January 2025, the IETF published RFC 9700, "Best Current Practice for OAuth 2.0 Security," which consolidates that decade of lessons into concrete guidance (summarized under RFC 9700: The Hardening Layer in Force Today, below). RFC 9700 is guidance on top of RFC 6749/6750. It doesn't supersede or deprecate them.
 
 OAuth 2.1 (draft-ietf-oauth-v2-1) is the next step, versioning the protocol rather than just profiling it. It is an attempt to fold RFC 9700's hardening directly into a single normative document that deprecates RFC 6749/6750. As of this writing, it is still an Internet-Draft in its [seventh year of iteration](https://datatracker.ietf.org/doc/draft-ietf-oauth-v2-1/). "OAuth 2.1" is best understood as the direction the ecosystem is consolidating toward, with most major 2.0 deployments largely compliant with minor changes, not a separately deployed protocol version.
 
-Separately, AAuth (draft-hardt-oauth-aauth-protocol) is an independent, early-stage draft built specifically for agent-to-resource access, designed to coexist with OAuth and OIDC, not to extend either.
+Separately, AAuth (draft-hardt-oauth-aauth-protocol) is an independent, early-stage draft built specifically for agent-to-resource access, designed to coexist with OAuth and OIDC, not to extend either. It is evaluated in its own chapter, which follows this one.
 
 ### What's Actually Deployed: OAuth 2.0 plus RFC 9700
 
@@ -216,7 +210,7 @@ Separately, AAuth (draft-hardt-oauth-aauth-protocol) is an independent, early-st
 
 RFC 9700 mandates the following:
 
-* Don't use the Implicit grant (response\_type=token). Tokens returned in a URL fragment are exposed to browser history, referrer leakage, and any script on the page.
+* Don't use the Implicit grant (`response_type=token`). Tokens returned in a URL fragment are exposed to browser history, referrer leakage, and any script on the page.
 
 
 * Don't use Resource Owner Password Credentials. Password-based delegation trains users to type credentials into third-party UIs and gives the client raw password access.
@@ -231,22 +225,24 @@ RFC 9700 mandates the following:
 * Prefer sender-constrained tokens (DPoP or mutual TLS) over plain bearer tokens where feasible.
 
 
-* Use state for CSRF protection and PKCE's code\_verifier together. Each protect against different attacks.
+* Use state for CSRF protection and PKCE's `code_verifier` together. Each protect against different attacks.
 
 
 None of this requires specific use of "OAuth 2.1" as a separate thing to implement. OAuth 2.1's contribution is mostly editorial consolidation: combining these BCP recommendations and making the safe behaviors the only correct specified behaviors.
 
 #### Client Authentication: Required vs. Common Practice
 
-*Deployed standard / Adjacent RFC.* RFC 6749 only requires that confidential clients authenticate to the token endpoint somehow. client\_secret\_basic and client\_secret\_post are the baseline methods, widely used today.
+*Deployed standard / Adjacent RFC.* RFC 6749 only requires that confidential clients authenticate to the token endpoint somehow. `client_secret_basic` and `client_secret_post` are the baseline methods, widely used today.
 
 Asymmetric client authentication has become common best practice for higher-assurance deployments:
 
-* private\_key\_jwt (RFC 7523). The client signs an assertion with its own private key instead of sending a shared secret.
+* `private_key_jwt` (RFC 7523). The client signs an assertion with its own private key instead of sending a shared secret.
 
 
 * Mutual TLS client authentication (RFC 8705). The client authenticates via its TLS certificate.
 
+
+Both methods still require the client to hold a long-lived secret, a private key in one case and a certificate key in the other. As the Introduction notes, agents cannot be trusted to keep secrets. In an agentic deployment the key must therefore be held by a component outside the agent, which signs on its behalf.
 
 These are additions layered onto OAuth 2.0, not outright mandates of  RFC 9700 or OAuth 2.1.
 
@@ -270,7 +266,7 @@ RFC 9700 recommends sender-constraining. It doesn't require it, and most OAuth 2
 
 #### Revocation
 
-*Deployed standard / Adjacent RFC.* RFC 7009 allows a client or resource owner request explicit revocation. Short-lived access tokens provide a passive backstop. OAuth 2.0 has no native notion of delegation-chain revocation, because it has no native delegation chain in the first place. Delegation semantics are difficult to expose to the user, but delegations can be tracked across the logs of the Authorization Server.
+*Deployed standard / Adjacent RFC.* RFC 7009 allows a client or resource owner request explicit revocation. Short-lived access tokens provide a passive backstop. OAuth 2.0 has no native notion of delegation-chain revocation. The only chain it has is the act claim an Authorization Server records when it performs Token Exchange (RFC 8693), and revoking one token in such a chain does not cascade by specification. Delegation semantics are difficult to expose to the user, but delegations can be tracked across the logs of the Authorization Server.
 
 ### OAuth 2.1 : Where the Consolidation Is Heading
 
@@ -290,72 +286,10 @@ Key changes in OAuth 2.1 vs. today's hardened OAuth 2.0:
 * Sender-constrained tokens (DPoP/mTLS) remain a SHOULD, not a MUST. OAuth 2.1 does not mandate proof-of-possession tokens.
 
 
-* Client secrets are still supported. The draft explicitly requires AS support for clients sending a plain client\_secret. Asymmetric client authentication is not the OAuth 2.1 baseline.
+* Client secrets are still supported. The draft explicitly requires AS support for clients sending a plain `client_secret`. Asymmetric client authentication is not the OAuth 2.1 baseline.
 
 
 A well-hardened, RFC 9700-compliant OAuth 2.0 deployment today is very close to "OAuth 2.1 compliant". OAuth 2.1's main value is editorial: a single document new implementers can build against without needing to piece together a  decade’s worth of separate BCP RFCs.
-
-### AAuth: A Separate, Independent Draft for Agent-to-Resource Access
-
-*AAuth*—*independent draft.* Caveat: this is a single-author Internet-Draft, not an IETF working-group product. It has already been renamed and restructured more than once. Treat the below as a snapshot of a moving target.
-
-#### Why It Exists
-
-AAuth (draft-hardt-oauth-aauth-protocol) was created by an OAuth 2.0/2.1 co-author who concluded that OAuth, in any version, is a poor fit for agent-to-resource access because:
-
-* Agents need authorization decisions made mid-task against resources they've never interacted with before.
-
-
-* Agents have no durable client\_id that travels across organizations the way OAuth assumes.
-
-
-* Copying long-lived API keys into autonomous workloads recreates the shared-secret leak surface OAuth 2.0 and 2.1 are trying to move away from.
-
-
-AAuth is explicitly designed to coexist with OAuth 2.0 and OpenID Connect, not extend either one.
-
-#### Architecture
-
-Roles (See [Terminology](https://www.ietf.org/archive/id/draft-hardt-oauth-aauth-protocol-10.html#section-3), in newest draft):
-
-* Person/Principal  
-* Agent Provider (AP): The Agent Provider is a centralized entity which controls which manages agent identity and issues agent tokens, providing centralized governance over a distributed agent fleet.  
-* Agent  
-* Person Server (PS): server that represents the principal to rest of the protocol. The person chooses their PS; it is not imposed by any other party. The PS manages missions, handles consent, asserts user identity, and brokers authorization on behalf of agents.  
-* Access Server (AS): A policy engine that evaluates token requests, applies resource policy, and issues auth tokens on behalf of a resource.  
-* Resource
-
-
-Token types:
-
-* `agent_token` establishes the agent's identity
-
-
-* `resource_token` describes the access a resource needs
-
-
-* `auth_token` grants access to a specific resource, where applicable
-
-
-Core mechanism: Signed HTTP requests using HTTP Message Signatures, not bearer tokens trusted on presentation. The simplest mode requires no token issuance flow at all.
-
-#### Four Resource Access Modes
-
-AAuth defines four modes, increasing in complexity:
-
-* Identity-based access: The agent signs requests with its agent\_token. The resource verifies the signature and applies its own access policy. No authorization flow, no additional tokens. This replaces API keys with cryptographic identity.
-
-
-* Resource-managed access (two-party): The resource handles authorization itself, optionally returning an opaque token for subsequent calls.
-
-
-* PS-asserted access (three-party): A Person Server vouches for claims about the person on whose behalf the agent acts, with a consent step and an auth\_token issued on approval.
-
-
-* Federated access (four-party): Extends the three-party model across an additional trust boundary.
-
-
-Key discovery: Agents and resources discover signing keys via well-known metadata and JWKS-style endpoints, similar in spirit to OAuth's JWKS discovery, but used for HTTP-signature key lookup, not bearer-token verification.
 
 ### Part 4: Comparative Scorecard
 
@@ -365,13 +299,13 @@ Key discovery: Agents and resources discover signing keys via well-known metadat
 
 In production today, almost all systems are using OAuth 2.0, hardened to RFC 9700's recommendations, with client secrets still alive and well at most token endpoints and bearer tokens still the default token type. OAuth 2.1 is where that hardening is headed as a single normative document. However, the changes are fairly minor. It doesn’t mandate PoP nor does it eliminate client secrets.
 
-AAuth, meanwhile, isn't a future version of OAuth at all. It's a parallel, signature-based protocol built because its author judged some core assumptions of the OAuth model itself a poor match for autonomous agents. AAuth, however, pushes complexity and risk into a fiduciary agent. This super-agent manages delegations, token-swaps, and other intermediary security and trust decisions. While AAuth ceremonies are different than those in OAuth, most of the token formats are lifted directly from OAuth, making it more of a logical variant than a complete overhaul of OAuth. UCAN/zCAP-LD remain the only one of the three with native, offline, multi-hop delegation \-- the clearest architectural line separating capability systems from the many HTTP Servers defining both the OAuth lineage and its AAuth variant (which adds a third Server).
+AAuth, meanwhile, isn't a future version of OAuth at all. It's a parallel, signature-based protocol built because its author judged some core assumptions of the OAuth model itself a poor match for autonomous agents. AAuth, however, pushes complexity and risk into a fiduciary agent. This super-agent manages delegations, token-swaps, and other intermediary security and trust decisions. While AAuth ceremonies are different than those in OAuth, most of the token formats are lifted directly from OAuth, making it more of a logical variant than a complete overhaul of OAuth. UCAN/zCAP-LD remain the only one of the three with native, offline, multi-hop delegation (the credential-based dSD-JWT draft in the Appendix shares that property) \-- the clearest architectural line separating capability systems from the many HTTP Servers defining both the OAuth lineage and its AAuth variant (which adds a third Server).
 
 ## AAuth Evaluation
 
 ### Overview
 
-AAuth is an emerging authorization architecture designed for authenticated interactions among people, AI agents, resources, Person Servers (PS), and Agent Providers (AP). Rather than treating software agents as extensions of end users, AAuth introduces authenticated agents as first-class participants capable of invoking protected resources, receiving asynchronous events, and operating across organizational boundaries. Crucially, the “container” for these cross-organizational distributed transactions is called a “mission” (dovetailing with [other work](https://notes.karlmcguinness.com/mission-handbook/) by OAuth Working Group insiders). While the previous chapter touched on AAuth in terms of its common assumptions and mechanisms, assessing AAuth as a bespoke protocol for managing and auditing agentic distributed transactions is easier treating it in isolation.
+AAuth is an emerging authorization architecture designed for authenticated interactions among people, AI agents, resources, Person Servers (PS), and Agent Providers (AP). Rather than treating software agents as extensions of end users, AAuth introduces authenticated agents as first-class participants capable of invoking protected resources, receiving asynchronous events, and operating across organizational boundaries. Crucially, the “container” for these cross-organizational distributed transactions is called a “mission” (dovetailing with [other work](https://notes.karlmcguinness.com/mission-handbook/) by OAuth Working Group insiders). Although AAuth grew out of the OAuth community and reuses several of its token formats, it is evaluated here in its own chapter, as a bespoke protocol for managing and auditing agentic distributed transactions.
 
 Unlike capability-based delegation systems such as UCAN and zCaps, AAuth does not represent delegated authority as a self-contained, cryptographically attenuated artifact carried entirely within a delegated credential. Instead, delegation is server-mediated. Authority is anchored within the Person Server, with delegation history represented through the act claim, Mission References, and the Mission Log maintained by the Person Server. AAuth therefore defines explicit delegation mechanics while intentionally separating delegation state from portable capability objects.
 
@@ -392,7 +326,75 @@ Where protocol specification and implementation practices differ, this distincti
 
 A note on method: This chapter was drafted with AI research collaborators under a gated review process, with final editorial authority held by the author. Load-bearing claims were verified directly against the AAuth specification repository rather than model recall — including the token-exchange question, the act claim's provenance, credential key-binding, and the Appendix B.3.7 attenuation rationale.
 
+### Origins and Architecture
+
+Caveat: this is a single-author Internet-Draft, not an IETF working-group product. It has already been renamed and restructured more than once. Treat the below as a snapshot of a moving target.
+
+#### Why It Exists
+
+AAuth (draft-hardt-oauth-aauth-protocol) was created by an OAuth 2.0/2.1 co-author who concluded that OAuth, in any version, is a poor fit for agent-to-resource access because:
+
+* Agents need authorization decisions made mid-task against resources they've never interacted with before.
+
+
+* Agents have no durable `client_id` that travels across organizations the way OAuth assumes.
+
+
+* Copying long-lived API keys into autonomous workloads recreates the shared-secret leak surface OAuth 2.0 and 2.1 are trying to move away from.
+
+
+AAuth is explicitly designed to coexist with OAuth 2.0 and OpenID Connect, not extend either one.
+
+#### Architecture
+
+Roles (See [Terminology](https://www.ietf.org/archive/id/draft-hardt-oauth-aauth-protocol-10.html#section-3), in newest draft):
+
+* Person/Principal  
+* Agent Provider (AP): The Agent Provider is a centralized entity which manages agent identity and issues agent tokens, providing centralized governance over a distributed agent fleet.  
+* Agent  
+* Person Server (PS): server that represents the principal to rest of the protocol. The person chooses their PS; it is not imposed by any other party. The PS manages missions, handles consent, asserts user identity, and brokers authorization on behalf of agents.  
+* Access Server (AS): A policy engine that evaluates token requests, applies resource policy, and issues auth tokens on behalf of a resource.  
+* Resource
+
+
+Token types:
+
+* `agent_token` establishes the agent's identity
+
+
+* `resource_token`, issued by the resource, states which authorization (resource, scope, and optionally account) the resource requires before it will serve the agent's request. The agent presents it to the Person Server or Access Server to obtain an `auth_token`
+
+
+* `auth_token` grants access to a specific resource, where applicable
+
+
+Core mechanism: Signed HTTP requests using HTTP Message Signatures, not bearer tokens trusted on presentation. The simplest mode requires no token issuance flow at all.
+
+#### Four Resource Access Modes
+
+AAuth defines four modes, increasing in complexity:
+
+* Identity-based access: The agent signs requests with its `agent_token`. The resource verifies the signature and applies its own access policy. No authorization flow, no additional tokens. This replaces API keys with cryptographic identity.
+
+
+* Resource-managed access (two-party): The resource handles authorization itself, optionally returning an opaque token for subsequent calls.
+
+
+* PS-asserted access (three-party): A Person Server vouches for claims about the person on whose behalf the agent acts, with a consent step and an `auth_token` issued on approval.
+
+
+* Federated access (four-party): Extends the three-party model across an additional trust boundary.
+
+
+Key discovery: Agents and resources discover signing keys via well-known metadata and JWKS-style endpoints, similar in spirit to OAuth's JWKS discovery, but used for HTTP-signature key lookup, not bearer-token verification.
+
 ### Scorecard
+
+#### Attenuated
+
+Verdict: Partial — differs by mode
+
+Sub-agent authorization supports attenuation: every request passes through the parent, which can refuse, attenuate, or rate-limit. Call chaining does not — downstream authorization is intentionally not required to be a subset of upstream scope. Cryptographically enforced attenuation is not intrinsic to the protocol in either case.
 
 #### Accountable (agent vs. principal/operator)
 
@@ -402,7 +404,7 @@ AAuth distinguishes authenticated people, agents, Person Servers, Agent Provider
 
 #### Resistant to confused deputy (no ambient authority)
 
-Verdict: Partial
+Verdict: Yes in the three token-based modes; No in identity-based mode
 
 The resource-managed, PS-asserted, and federated modes bind an authorization to a designated resource and scope through the resource token, combining designation with authorization. The **optional** account parameter added in draft-10 narrows that binding further, naming which account at the resource the authorization covers and propagating through the resource token into the auth token. Identity-based access does not do this: the resource authorizes on the agent's identity alone and applies its own access control, which is ambient authority.
 
@@ -416,19 +418,13 @@ Authorization context and Mission References are represented, but expressive del
 
 Verdict: Yes
 
-Delegation chains are represented through the act claim and the Mission Log. Chains are server-mediated rather than portable capability artifacts. Sub-agent nesting is single-level; deeper workflows use chained top-level agents, each an independent principal holding its own grant.
+Delegation chains are represented through the act claim and the Mission Log. Chains are server-mediated rather than portable capability artifacts. A sub-agent may not have sub-agents of its own. Workflows that need more depth use call chaining instead, in which each agent in the chain is a top-level agent holding its own grant from the Person Server, rather than a sub-agent of the one before it.
 
 #### Cross-organizational / locally verifiable
 
 Verdict: Yes
 
 Designed for authenticated interactions across organizational boundaries while preserving local trust relationships.
-
-#### Attenuated
-
-Verdict: Partial — differs by mode
-
-Sub-agent authorization supports attenuation: every request passes through the parent, which can refuse, attenuate, or rate-limit. Call chaining does not — downstream authorization is intentionally not required to be a subset of upstream scope. Cryptographically enforced attenuation is not intrinsic to the protocol in either case.
 
 #### Self-revocable
 
@@ -440,9 +436,19 @@ Token revocation, mission revocation, and propagation through a parent's grant a
 
 Verdict: Yes
 
-Core capability of the protocol. `draft-10` requires a fully-specified alg identifier, recommends Ed25519, and prohibits none, symmetric algorithms, and the polymorphic EdDSA identifier that RFC 9864 deprecated.
+Core function of the protocol. `draft-10` requires a fully-specified alg identifier, recommends Ed25519, and prohibits none, symmetric algorithms, and the polymorphic EdDSA identifier that RFC 9864 deprecated.
 
 ### Detailed Evaluation
+
+#### Attenuated
+
+Attenuation in AAuth differs by delegation mode. Sub-agent authorization supports it directly: every sub-agent request passes through the parent, which can refuse, attenuate, or rate-limit. Call chaining, by design, does not support delegation.  Downstream authorization is intentionally not required to be a subset of upstream scope, and downstream scope is constrained by the downstream resource's own policy together with Person Server evaluation against mission context.
+
+Unlike UCAN or zCaps, attenuation is not represented as a cryptographically enforced property of a portable delegation artifact. Instead, attenuation depends upon server-managed mission state and policy evaluation.
+
+The protocol therefore leaves attenuation semantics outside its definition, supplying contextual evaluation in place of algebraic constraint.
+
+This is deliberate design rather than omission. AAuth does not adopt the RFC 8693 token-exchange model for attenuation (it borrows only that RFC's act claim structure for representing delegation chains), and Appendix B.3.7 states the rationale directly: downstream scope is intentionally not required to be a subset of upstream scope, because "the PS evaluates each hop against the mission context, providing governance-based constraints... more flexible than algebraic attenuation rules." The one place attenuation exists within an agent's own purview is sub-agent authorization, where the parent "can refuse, attenuate, or rate-limit" the sub-agent's authority.
 
 #### Accountable (agent vs. principal/operator)
 
@@ -456,9 +462,11 @@ The specification also permits a resource to authorize an agent based solely on 
 
 #### Resistant to confused deputy (no ambient authority)
 
-The confused deputy problem arises where a party exercises its own permissions on a resource designated by someone else. The defence is to combine designation with authorization, so that what may be done is bound to what it may be done to.
+The confused deputy problem arises where a party exercises its own permissions on a resource designated by someone else. The defense is to combine designation with authorization, so that what may be done is bound to what it may be done to.
 
 In the resource-managed, PS-asserted, and federated modes AAuth does this. The agent obtains a resource token naming the resource and scope; the auth token issued against it carries that binding, and the resource enforces it. The OPTIONAL account parameter, added in \-10, narrows the binding further: it names which account at the resource the authorization is for, drawn from the resource's own namespace, and is echoed through the resource token into the auth token, so an auth token for one account grants nothing at another.
+
+One caution applies. The account parameter scopes an authorization to an existing account at the resource. Deployments that lean on it may let agents operate within a person's account instead of under agent-specific grants, which drifts toward credential sharing and the audit and revocation problems that come with it.
 
 Identity-based access is the exception, and a deliberate one. The agent signs requests with its agent token, and the resource applies its own access control based on who the agent is. There is no authorization flow and no designation carried with the request. The specification presents this as a replacement for API keys, which it is; but authority derived from identity alone is ambient, and an agent acting on a request supplied by another party has no way to signal that the request is not its own.
 
@@ -478,7 +486,7 @@ Unlike certificate capability-based systems, delegation history is maintained by
 
 Accordingly, AAuth supports delegation chains, but those chains are server-mediated rather than self-contained cryptographic artifacts.
 
-Sub-agent nesting is limited to a single level: a sub-agent must not have sub-agents of its own, and the specification enforces this from both directions. Deeper workflows are carried instead by call chaining, where each hop is an independent top-level agent holding its own grant rather than a recursive sub-agent — which is also why upstream-subset rules do not apply to it. What the specification defers to a companion document is mission state administration beyond completion: revocation state transitions, delegation-tree queries, and administrative interfaces. Delegation-chain lifecycle is not deferred; sub-agent revocation propagates through the parent's grant.
+Sub-agent nesting is limited to a single level: a sub-agent must not have sub-agents of its own, and the specification enforces this from both directions. Workflows that need more depth use call chaining instead. In call chaining each agent is a top-level agent that holds its own grant from the Person Server, rather than a sub-agent of the agent that called it, which is also why the upstream-subset rule does not apply to it. What the specification defers to a companion document is mission state administration beyond completion: revocation state transitions, delegation-tree queries, and administrative interfaces. Delegation-chain lifecycle is not deferred; sub-agent revocation propagates through the parent's grant.
 
 #### Cross-Organizational / Locally Verifiable
 
@@ -490,21 +498,11 @@ Trust remains anchored in authenticated protocol interactions and configured tru
 
 From a capability-based perspective, the need for Access Server federation may indicate that authority remains server-mediated rather than fully represented by the delegation credential itself. If the delegation credential carried sufficient authority for cross-domain verification, no ongoing relationship between authorization servers would be required.
 
-#### Attenuated
-
-Attenuation in AAuth differs by delegation mode. Sub-agent authorization supports it directly: every sub-agent request passes through the parent, which can refuse, attenuate, or rate-limit. Call chaining, by design, does not support delegation.  Downstream authorization is intentionally not required to be a subset of upstream scope, and downstream scope is constrained by the downstream resource's own policy together with Person Server evaluation against mission context.
-
-Unlike UCAN or zCaps, attenuation is not represented as a cryptographically enforced property of a portable delegation artifact. Instead, attenuation depends upon server-managed mission state and policy evaluation.
-
-The protocol therefore leaves attenuation semantics outside its definition, supplying contextual evaluation in place of algebraic constraint.
-
-This is deliberate design rather than omission. AAuth does not adopt the RFC 8693 token-exchange model for attenuation (it borrows only that RFC's act claim structure for representing delegation chains), and Appendix B.3.7 states the rationale directly: downstream scope is intentionally not required to be a subset of upstream scope, because "the PS evaluates each hop against the mission context, providing governance-based constraints... more flexible than algebraic attenuation rules." The one place attenuation exists within an agent's own purview is sub-agent authorization, where the parent "can refuse, attenuate, or rate-limit" the sub-agent's authority.
-
 #### Self-Revocable
 
 AAuth includes mechanisms for token revocation and lifecycle management.
 
-\-10 specifies named revocation scenarios: a Person Server revoking an auth token it issued or provided, an Access Server revoking one it issued, an agent provider revoking an agent token, and a Person Server revoking a mission, after which subsequent token requests referencing that mission are denied. Revocation also propagates structurally. Revoking a parent's grant causes the next sub-agent authorization to fail, and tokens already issued expire within the hour.
+\-10 specifies named revocation scenarios: a Person Server revoking an auth token it issued or provided, an Access Server revoking one it issued, an agent provider revoking an agent token, and a Person Server revoking a mission, after which subsequent token requests referencing that mission are denied. Revocation also propagates structurally. Revoking a parent's grant causes the next sub-agent authorization to fail, and tokens already issued expire on their own at the end of their short lifetimes. The draft does not fix an auth token lifetime; its examples use one hour, and agent tokens SHOULD NOT exceed 24 hours.
 
 The specification is candid about the limits. Verifying an auth token does not consult its issuer, so nothing in the verification path reports that a token has been revoked; a party that no revocation request reaches is bounded only by token lifetime. What remains unspecified is mission state administration beyond completion, deferred to a companion specification. Revocation is therefore exercised by the servers holding authority rather than by a holder acting on a credential in hand.
 
@@ -522,7 +520,7 @@ Accordingly, AAuth is best understood as a server-mediated delegation and execut
 
 ### Overview
 
-Three of the specifications in this survey are realizations of the same underlying model, and this chapter evaluates them together. Authorization Capabilities ("zCaps", standardized in draft as [Authorization Capabilities v0.3](https://w3c-ccg.github.io/zcap-spec/)) and the [User-Controlled Authorization Network](https://ucan.xyz/) ("UCANs") are both certificate capability systems: the authorization is a structured, cryptographically signed artifact that a delegator hands to a delegatee, carrying within itself everything a verifier needs to check it. Both descend from the [object-capability](https://en.wikipedia.org/wiki/Object-capability_model) tradition (UCAN cites [SPKI](https://en.wikipedia.org/wiki/Simple_public-key_infrastructure) as its direct ancestor), and both make the same core design choice: access is decided by possession ("do you hold a valid capability, and can you prove control of its key?") rather than by identity ("who are you, and what does my policy store say about you?").
+Three of the specifications in this survey are realizations of the same underlying model, and this chapter evaluates them together. Authorization Capabilities ("zCaps", standardized in draft as [Authorization Capabilities v0.3](https://w3c-ccg.github.io/zcap-spec/)) and the [User-Controlled Authorization Network](https://ucan.xyz/) ("UCANs") are both certificate capability systems: the authorization is a structured, cryptographically signed artifact that a delegator hands to a delegatee, carrying within itself everything a verifier needs to check it. Both descend from the [object-capability](https://en.wikipedia.org/wiki/Object-capability_model) tradition (UCAN cites [SPKI](https://en.wikipedia.org/wiki/Simple_public-key_infrastructure) as its direct ancestor), and both make the same core design choice: access is decided by possession ("do you hold a valid capability, and can you prove control of its key?") rather than by identity ("who are you, and what does my policy store say about you?"). A fourth artifact of the same general kind, the credential-based dSD-JWT draft, is covered in the Appendix.
 
 The third, [KYA-OS](https://github.com/decentralized-identity/kya-os-mcp) (Know Your Agent Operating System, a DIF Trusted AI Agents Working Group specification with a Model Context Protocol binding), can be thought of as an extended profile of zCaps. Its delegation credential is a W3C Verifiable Credential 2.0 whose `credentialSubject` is an attenuated ZCAP-LD capability, carried one credential per delegation hop. Around that delegation core KYA-OS adds what the other two leave to companion layers:
 
@@ -534,7 +532,7 @@ The third, [KYA-OS](https://github.com/decentralized-identity/kya-os-mcp) (Know 
 
 KYA-OS also ships an older delegation shape (a VC 1.0 with a custom payload and a non-standard signature). This chapter evaluates only the VC 2.0 plus ZCAP-LD profile, which is the one the Entity Card path issues and verifies and the one the working group ratified.
 
-The shared model works as follows. The root of authority is the resource owner; there is no central authorization server. A capability answers which agent can do what, with which resource, under which restrictions. Delegation is performed offline, by signing a new capability with a key the parent authorized; no round trip to the resource server or any other party is needed to delegate. Each delegation step must monotonically attenuate: a delegatee can pass on no more than they hold, along whatever axes the spec defines (actions, time, resource scope, policy). At invocation time, the delegatee presents the capability together with its delegation chain and a proof of key possession, and the verifier checks the chain locally and cryptographically.
+The shared model works as follows. The root of authority is the resource owner; there is no central authorization server. A capability answers whether a given request, for this action on this resource, is authorized, and under which restrictions. It does not ask who the requester is. Delegation is performed offline, by signing a new capability with a key the parent authorized; no round trip to the resource server or any other party is needed to delegate. Each delegation step must monotonically attenuate: a delegatee can pass on no more than they hold, along whatever axes the spec defines (actions, time, resource scope, policy). At invocation time, the delegatee presents the capability together with its delegation chain and a proof of key possession, and the verifier checks the chain locally and cryptographically.
 
 Because the three specs score as a family against the evaluation checklist, the scorecard below covers them in one table, with the shared reasoning stated once and per-spec nuances called out. KYA-OS departs from the family verdict on three rows (accountability, local verifiability, and self-revocation), and those departures get their own paragraphs. The second half of the chapter covers where the specs genuinely diverge: encoding, chain transport, resource scoping, revocation mechanics, and a few features present in only one of them. The design choice KYA-OS makes, of carrying a capability inside a Verifiable Credential, has consequences beyond this one spec and is treated separately in the next chapter, Modeling Chained Delegation with W3C VCs.
 
@@ -546,18 +544,53 @@ Reference points used in this evaluation:
 
 ### Scorecard
 
-| \# | Requirement | zCaps | UCAN | KYA-OS | Notes |
-| ----- | ----- | ----- | ----- | ----- | ----- |
-| 1 | Accountable (agent vs. principal/operator) | Partial | Partial | Yes | zCaps and UCAN: every delegation edge is signed and thus attributable to a responsible delegator, but neither data model distinguishes "agent" from "legal-entity operator"; both are opaque DID-identified principals, and identity binding is delegated to a companion layer (VCs and issuer registries for zCaps; DID methods and higher-level identity systems for UCAN). KYA-OS builds that layer in: a Responsible Party (the root issuer) and a Principal (the immediate human delegator) are named, typed, and recomputed from the chain on every verification. |
-| 2 | Resistant to confused deputy | Yes | Yes | Yes | By construction, as capability systems: designation and authorization travel together in the signed artifact (invocationTarget plus allowedAction; subject times command times policy), so a delegatee never exercises its own ambient authority on a resource designated by another party. KYA-OS inherits the zCap pair and adds a per-hop audience and an invocation-time designation rule. |
-| 3 | Represent authorization policies ("undelegatable", re-delegation rules, advisory "please") | Partial | Partial | Partial | All three provide an extensible policy slot and none ships a delegation-control vocabulary. zCaps reserve a generic caveat property, unused in deployment. UCAN defines a policy syntax (the pol property) and reserves the /ucan command namespace. KYA-OS standardizes two caveat types (ValidUntil, MaxAmount) and a rule that unknown caveats must be copied verbatim down the chain, but nothing for delegation control. None has an advisory (non-enforced) tier; all are binary enforce/reject. |
-| 4 | Chainable | Yes | Yes | Yes | The headline feature of the family. zCaps: parentCapability plus capabilityChain proof chains. UCAN: hash-linked self-certifying certificates rooted in the resource owner. KYA-OS: one credential per hop, parentCapability links, the same continuity rule as zCaps. All cover operator to agent and agent to sub-agent, with links creatable offline. |
-| 5 | Cross-organizational / locally verifiable | Yes | Yes | Partial | Verification is cryptographic and local in all three; principals are DIDs, so no party needs an account on another's IAM system. zCaps mandate the full chain be carried in the invocation, with no verifier network access required. UCAN resolves proofs by CID from a local store, DHT, gossip, or REST. KYA-OS references the chain by a locator that the verifier resolves from a delegation registry, so verification depends on that registry being reachable or cached. DID resolution and revocation freshness may still touch the network in all three. |
-| 6 | Attenuated | Yes | Yes | Yes | All three enforce monotonic attenuation, on different axes. zCaps: allowedAction subsets, no-later expires, URL path/query suffix narrowing of invocationTarget. UCAN: capability sets must not widen, nbf/exp validity intersection, command-lattice narrowing, policy statements. KYA-OS: allowedAction subsets, no-later validity, monotone typed caveats; the invocationTarget is held constant along the chain rather than narrowed. |
-| 7 | Self-revocable | Yes (at RS) | Yes (per Revocation spec) | Partial | Same guarantee in the first two, opposite mechanics. zCaps: any controller in the chain POSTs the zCap to an RS revocation endpoint; out-of-band, RS-enforced, online-only. UCAN: revocation is a first-class command (/ucan/revoke) with a Revoker role, expressed inside the same capability model; dissemination is left open (DHT, gossip, etc.). KYA-OS: the direct issuer or any ancestor may revoke, with cascading effect, via W3C Bitstring Status Lists; the holder of a delegation may not revoke it, and revocation as a delegable permission is deferred to a future version. |
-| \+ | Authentication / Proof of Possession | Yes | Yes | Yes | zCaps: HTTP Message Signatures (Cavage, migrating to RFC 9421\) or a Data Integrity capabilityInvocation proof; the request itself is signed. UCAN: the Varsig envelope is signed by the issuer key, with a required nonce, time bounds, and signed invocations. KYA-OS: a detached JWS per request over a canonicalized claim set that binds the request body, the recipient's DID, and a nonce, with an optional RFC 9421 sibling signature. All are DPoP-analogous: an intercepted invocation cannot be replayed without the key. |
+Each entry gives the requirement, the verdict for each spec, and the shared reasoning.
+
+**1. Attenuated.** zCaps: Yes. UCAN: Yes. KYA-OS: Yes.
+
+All three enforce monotonic attenuation, on different axes. zCaps: allowedAction subsets, no-later expires, URL path/query suffix narrowing of invocationTarget, and the reserved caveat slot. UCAN: capability sets must not widen, nbf/exp validity intersection, command-lattice narrowing, policy statements. KYA-OS: allowedAction subsets, no-later validity, monotone typed caveats; the invocationTarget is held constant along the chain rather than narrowed. In all three, a caveat or policy statement added at a hop is a further attenuation axis, inherited by every hop below.
+
+**2. Accountable (agent vs. principal/operator).** zCaps: Partial. UCAN: Partial. KYA-OS: Yes.
+
+zCaps and UCAN: every delegation edge is signed and thus attributable to a responsible delegator, but neither data model distinguishes "agent" from "legal-entity operator"; both are opaque DID-identified principals, and identity binding is delegated to a companion layer (VCs and issuer registries for zCaps; DID methods and higher-level identity systems for UCAN). Where a fresh key is minted for each delegation, accountability is hop by hop: each delegator vouches for the next key, and an auditor resolves one edge at a time. KYA-OS builds that layer in: a Responsible Party (the root issuer) and a Principal (the immediate human delegator) are named, typed, and recomputed from the chain on every verification.
+
+**3. Resistant to confused deputy.** zCaps: Yes. UCAN: Yes. KYA-OS: Yes.
+
+By construction, as capability systems: designation and authorization travel together in the signed artifact (invocationTarget plus allowedAction; subject times command times policy), so a delegatee never exercises its own ambient authority on a resource designated by another party. This holds to the extent the designation is specific. A capability whose target is a URL prefix or a broad command designates a set of resources, and the resistance is correspondingly coarser. KYA-OS inherits the zCap pair and adds a per-hop audience and an invocation-time designation rule.
+
+**4. Represent authorization policies (functional restrictions, re-delegation rules, advisory "please").** zCaps: Partial. UCAN: Partial. KYA-OS: Partial.
+
+All three provide an extensible policy slot and none ships a delegation-control vocabulary. zCaps reserve a generic caveat property, unused in deployment. UCAN defines a policy syntax (the pol property) and reserves the /ucan command namespace. KYA-OS standardizes two caveat types (ValidUntil, MaxAmount) and a rule that unknown caveats must be copied verbatim down the chain, but nothing for delegation control. None has an advisory (non-enforced) tier; all are binary enforce/reject.
+
+**5. Chainable.** zCaps: Yes. UCAN: Yes. KYA-OS: Yes.
+
+The headline feature of the family. zCaps: parentCapability plus capabilityChain proof chains. UCAN: hash-linked self-certifying certificates rooted in the resource owner. KYA-OS: one credential per hop, parentCapability links, the same continuity rule as zCaps. All cover operator to agent and agent to sub-agent, with links creatable offline.
+
+**6. Cross-organizational / locally verifiable.** zCaps: Yes. UCAN: Yes. KYA-OS: Partial.
+
+Verification is cryptographic and local in all three; principals are DIDs, so no party needs an account on another's IAM system. zCaps mandate the full chain be carried in the invocation, with no verifier network access required. UCAN resolves proofs by CID from a local store, DHT, gossip, or REST. KYA-OS references the chain by a locator that the verifier resolves from a delegation registry, so verification depends on that registry being reachable or cached. DID resolution and revocation freshness may still touch the network in all three.
+
+**7. Self-revocable.** zCaps: Yes (at RS). UCAN: Yes (per Revocation spec). KYA-OS: Partial.
+
+Same guarantee in the first two, opposite mechanics. zCaps: any controller in the chain POSTs the zCap to an RS revocation endpoint; out-of-band, RS-enforced, online-only. UCAN: revocation is a first-class command (/ucan/revoke) with a Revoker role, expressed inside the same capability model; dissemination is left open (DHT, gossip, etc.). Earlier UCAN versions (before 1.0) described revocation as a free-standing signed statement rather than a command, so deployments on those versions differ. KYA-OS: the direct issuer or any ancestor may revoke, with cascading effect, via W3C Bitstring Status Lists; the holder of a delegation may not revoke it, and revocation as a delegable permission is deferred to a future version.
+
+**8. Authentication / Proof of Possession (nice-to-have).** zCaps: Yes. UCAN: Yes. KYA-OS: Yes.
+
+zCaps: HTTP Message Signatures (Cavage, migrating to RFC 9421) or a Data Integrity capabilityInvocation proof; the request itself is signed. UCAN: the Varsig envelope is signed by the issuer key, with a required nonce, time bounds, and signed invocations. KYA-OS: a detached JWS per request over a canonicalized claim set that binds the request body, the recipient's DID, and a nonce, with an optional RFC 9421 sibling signature. All are DPoP-analogous: an intercepted invocation cannot be replayed without the key.
 
 ### Detailed Evaluation
+
+#### Attenuated
+
+All three specs enforce monotonic attenuation, checked by the verifier at every link: a delegator can hand out no more than they hold. The axes differ.
+
+zCaps attenuate along three deployed axes: allowedAction in a child must not be less restrictive than the parent's; expires must not be later than the parent's (and every delegated zCap must have an expiry); and invocationTarget may be narrowed by appending a URL path or query suffix (/bars/123 to /bars/123/bazzes/456?day=tuesday). The caveat property is reserved as a fourth axis but unused in practice.
+
+UCAN attenuates abstractly: each direct delegation must restate or diminish its permissions, the validity interval is the intersection across the chain (latest nbf to earliest exp), and commands narrow along a lattice, where shorter command paths prove longer ones in the same namespace (/crud can prove /crud/read but not /stack/pop). Policy statements and arguments provide further attenuation axes.
+
+KYA-OS attenuates along the zCap action and time axes and along typed caveats, and drops the resource axis. A child's `allowedAction` must be a subset of its parent's; the credential's `validUntil` must be no later than the parent's; for each parent caveat the child must carry a caveat of the same type that is at least as narrow, with `MaxAmount` compared as exact decimals; and the `invocationTarget` must be identical at every hop. Any broadening hop invalidates the whole chain. The verifying resource is told to assert its own identity as the expected target, so a chain minted for a different resource fails at the root rather than being accepted by an unrelated verifier.
+
+The limitations are mirror images. zCap attenuation of the resource is restricted to URL-suffix shaping, fine for hierarchical REST resources but awkward for non-hierarchical scoping. A URL prefix also designates a set of resources rather than one, so designation is only as specific as the URL structure allows. A single zCap carries exactly one invocationTarget (multiple target/action combinations are listed as future work). UCAN's abstraction is more flexible but less prescriptive: resource scoping is left to how cmd and args are interpreted, with no normative URL rules in the core spec. KYA-OS gives up resource narrowing entirely: the target is a DID naming a server or service, and everything below it (which tools, which files) is expressed as action strings, so a delegator who holds authority over a whole server cannot hand down authority over one path of it except by action naming conventions.
 
 #### Accountable: agent vs. principal/operator
 
@@ -583,7 +616,7 @@ All have the extension point. The zCap spec defines a generic caveat property: t
 
 None ships a delegation-control vocabulary. In zCap deployments no caveat notation is currently used at all; attenuation is expressed implicitly through allowedAction, expires, and URL-suffix narrowing. UCAN's policy syntax expresses conditions on invocation arguments (the spec's examples are of the form "from this email address"), but standardizes nothing for delegation control. KYA-OS's two caveats constrain time and spend, not re-delegation.
 
-Against the checklist's specific policy examples, the three specs fail identically:
+Against the commonly requested policy examples, the three specs fail identically:
 
 * "Do not delegate further" / "this permission is undelegatable": not natively expressible in any of them. zCaps have no depth-limit or non-delegation flag; the only depth control is a verifier-global chain-length cap (the RS's blanket rule, not a per-capability instruction). UCAN likewise defines no such caveat; delegation is constrained only by the attenuation rules. KYA-OS takes the zCap position explicitly: a chain-length cap is the verifier's local resource limit, not a protocol rule, and a chain one verifier refuses is not thereby invalid elsewhere. (In the zCap design philosophy this is deliberate: forbidding delegation is considered an anti-pattern, since a delegatee can always proxy or share the controlling key.)  
 * Re-delegation policies: not standardized in any; all would need custom caveats or resource-specific policy semantics.  
@@ -603,23 +636,11 @@ All three directly satisfy the two senses the checklist asks for: principal/oper
 
 #### Cross-organizational / locally verifiable
 
-Strong in all three by design, with one qualification for KYA-OS. Verification is purely cryptographic and local to the verifier: it traverses the chain from the root down, checking each delegation proof against the key authorized by the step above, and checking that each step only narrows authority. Principals are DID-based key identifiers, so two organizations can delegate to each other purely by exchanging signed capabilities, with no accounts on each other's IAM systems.
+Strong in all three by design, with one qualification for KYA-OS. Verification is purely cryptographic and local to the verifier: it traverses the chain from the root down, checking each delegation proof against the key authorized by the step above, and checking that each step does not expand authority. Principals are DID-based key identifiers, so two organizations can delegate to each other purely by exchanging signed capabilities, with no accounts on each other's IAM systems.
 
 The specs differ in how the chain reaches the verifier. zCaps fix this normatively: a delegated zCap must carry its entire chain in the invocation, and a verifier must not be required to make network requests or database queries to dereference it; the root of trust is the RS, which dereferences the root zCap's controller from its own store. UCAN relies on content addressing: tokens are identified by CID, and proofs are resolvable from wherever the deployment keeps them (local store, DHT, gossip, REST), which makes chain transport a policy choice rather than a normative embedding rule. KYA-OS references the chain: the invocation carries a delegation id, the Entity Card carries a `delegationRef` locator described as "resolved, not inlined", and the protocol defines a Delegation Registry that stores the credentials and answers queries by issuer, subject, scope, and status. The chain evaluator itself takes the resolved credentials as input and is local, but getting them in hand is a resolution step against a store the verifier must trust and reach. Within a single deployment, where the verifier issues and indexes its own delegations, this is a local lookup. Across organizations it is a dependency the other two specs do not have, and it is why KYA-OS scores Partial on this row.
 
 Verification involves several steps, some of which (like DID resolution) may need to access the network, and some (like checking a local revocation registry) can be done offline. To put it another way, chain structure verification can be performed offline; key revocation checks and other verification steps may need network access.
-
-#### Attenuated
-
-All three specs enforce monotonic attenuation, checked by the verifier at every link: a delegator can hand out no more than they hold. The axes differ.
-
-zCaps attenuate along three deployed axes: allowedAction in a child must not be less restrictive than the parent's; expires must not be later than the parent's (and every delegated zCap must have an expiry); and invocationTarget may be narrowed by appending a URL path or query suffix (/bars/123 to /bars/123/bazzes/456?day=tuesday). The caveat property is reserved as a fourth axis but unused in practice.
-
-UCAN attenuates abstractly: each direct delegation must restate or diminish its capabilities, the validity interval is the intersection across the chain (latest nbf to earliest exp), and commands narrow along a lattice, where shorter command paths prove longer ones in the same namespace (/crud can prove /crud/read but not /stack/pop). Policy statements and arguments provide further attenuation axes.
-
-KYA-OS attenuates along the zCap action and time axes and along typed caveats, and drops the resource axis. A child's `allowedAction` must be a subset of its parent's; the credential's `validUntil` must be no later than the parent's; for each parent caveat the child must carry a caveat of the same type that is at least as narrow, with `MaxAmount` compared as exact decimals; and the `invocationTarget` must be identical at every hop. Any broadening hop invalidates the whole chain. The verifying resource is told to assert its own identity as the expected target, so a chain minted for a different resource fails at the root rather than being accepted by an unrelated verifier.
-
-The limitations are mirror images. zCap attenuation of the resource is restricted to URL-suffix shaping, fine for hierarchical REST resources but awkward for non-hierarchical scoping, and a single zCap carries exactly one invocationTarget (multiple target/action combinations are listed as future work). UCAN's abstraction is more flexible but less prescriptive: resource scoping is left to how cmd and args are interpreted, with no normative URL rules in the core spec. KYA-OS gives up resource narrowing entirely: the target is a DID naming a server or service, and everything below it (which tools, which files) is expressed as action strings, so a delegator who holds authority over a whole server cannot hand down authority over one path of it except by action naming conventions.
 
 #### Self-revocable
 
@@ -679,6 +700,8 @@ KYA-OS: the issuer of the root credential, which the protocol calls the Responsi
 
 UCAN defines a spec-level algebra for combining authority: the set of capabilities delegated by a UCAN is its "authority", merging capability authorities must follow set semantics (the result includes all capabilities from the inputs), and authorities can be combined in any order. This supports compositionality across resources, with no distinction between co-located and distributed resources. zCaps and KYA-OS define only single-root, single-target chains: one parentCapability per delegated capability, one invocationTarget per capability, and no defined algebra for merging multiple chains into a combined authority. (As discussed in the evaluation checklist, composability is trivially satisfied by any capability system at the model level; the asymmetry here is about spec-level machinery, not achievability.)
 
+In UCAN's own terms the set of capabilities a delegation conveys is its authority, so a single UCAN artifact may carry more than one capability in the strict, single-resource sense of the word, while a zCap or KYA-OS credential carries exactly one.
+
 #### Container and signature format
 
 zCaps are JSON-LD documents (with a zcap context plus a security suite context) signed with Data Integrity proofs under the capabilityDelegation proof purpose; there is no content-addressing requirement.
@@ -691,7 +714,7 @@ This is the divergence that most shapes each spec's natural habitat: zCaps sit o
 
 #### Chain structure and transport
 
-zCaps fix the wire representation of the chain: the capabilityChain must include the root zCap's id and every ancestor by id, except the immediate parent, which must be fully embedded; verifiers must not be required to perform network requests to dereference the chain.
+zCaps fix the wire representation of the chain: the capabilityChain carries the root zCap by id (the verifier dereferences it from its own store) and every delegated zCap in the chain in full; verifiers must not be required to perform network requests to dereference the chain.
 
 UCAN defines chains logically and relies on content-addressed storage and transport: proofs may be carried inline or referenced by CID and resolved from a delegation store, DHT, gossip, or REST endpoint, with no prescribed embedding pattern.
 
@@ -707,6 +730,8 @@ UCAN reuses its own envelope: the Invocation sub-spec describes an Invoker sendi
 
 KYA-OS carries the invocation proof inside the MCP message, under a reverse-DNS key in `_meta`, binding the JSON-RPC method and params rather than an HTTP request. An optional RFC 9421 signature over the same claims lets an HTTP edge verify the proof with a stock message-signature verifier. KYA-OS also signs the server's side: every response carries a detached JWS over the request hash and response hash, so a tool call is non-repudiable for both parties, and an audit profile builds transparency-log receipts on those proofs. Neither zCaps nor UCAN sign responses.
 
+The specs differ on resource arguments. A UCAN invocation carries the arguments of the command in args, which policy statements can constrain. A zCap invocation has no argument structure of its own: the arguments are simply the HTTP request's query and body, covered by the request signature and digest but not by the capability's attenuation rules. KYA-OS follows the zCap pattern: the request hash covers the JSON-RPC params, and only its typed caveats (such as MaxAmount) reach into them.
+
 #### Audience
 
 zCaps and UCANs have no audience field separate from the resource; the target of the capability is the party expected to verify it.
@@ -721,7 +746,7 @@ KYA-OS defines the opposite behavior: a server that finds no sufficient delegati
 
 #### Powerline (UCAN only)
 
-UCAN's delegation work defines Powerline, a pattern for automatically delegating all future delegations to another agent regardless of Subject. Once established, it acts as a standing delegation conduit: whenever any issuer delegates along that line, authority transparently flows to the designated sink agent without being explicitly named in each delegation. It is built from normal UCAN pieces (principals, subjects, delegation rules) rather than a new primitive, and it is useful for centralizing audit, enforcement, or mediation in a specific agent, for example a storage or orchestration service that should automatically receive all capabilities granted in a namespace. Neither zCaps nor KYA-OS has an analog.
+UCAN's delegation work defines Powerline, a pattern for automatically delegating all future delegations to another agent regardless of Subject. Once established, it acts as a standing delegation conduit: whenever any issuer delegates along that line, authority transparently flows to the designated sink agent without being explicitly named in each delegation. It is built from normal UCAN pieces (principals, subjects, delegation rules) rather than a new primitive, and it is useful for centralizing audit, enforcement, or mediation in a specific agent, for example a storage or orchestration service that should automatically receive all capabilities granted in a namespace. The delegation spec itself flags the pattern as "very powerful. Use with care," and forbids a Powerline delegation as the root delegation to a resource. Neither zCaps nor KYA-OS has an analog.
 
 #### Typed entities and discovery (KYA-OS only)
 
@@ -870,22 +895,55 @@ Where Cedar (the language) and runtime-evaluation deployments like Cedarling dif
 
 ### Scorecard
 
-| \# | Requirement | Verdict | Notes |
-| ----- | ----- | ----- | ----- |
-| 1 | **Accountable** (agent vs. principal/operator) | Yes (at the modeling level) | The schema can type the distinction directly (e.g. `entity Agent in [User]`); Cedarling derives separate User and Workload principals from the `id_token` and `access_token` and can require both to be authorized. But the distinction is data the verifier trusts an Authorization Server and token exchange to provide, not a cryptographically attributable delegation edge. |
-| 2 | **Resistant to confused deputy** | No | Identity-based by design: the deputy exercises its own standing permissions against a caller-designated resource, and the model does not combine designation with authorization. Policies can condition on request context to mitigate specific deputy scenarios, but that is mitigation, not structural immunity. |
-| 3 | **Represent authorization policies** (embed/link; "undelegatable", re-delegation rules, advisory "please") | Yes, except advisory | This is Cedar's core competence. "Do not delegate further" and re-delegation rules are expressible if delegation itself is modeled as an action. No advisory tier: decisions are binary permit/forbid, with no obligations or native "honor-if-possible" semantics. |
-| 4 | **Chainable** | No (stack-dependent) | No delegation primitive, no chain artifact. Delegation can be modeled as verifier-side **state** (entities or instantiated policy templates), but chains are not portable, signed, or first-class. In a delegation stack, the chain must live in the carrier or elsewhere in the Authorization stack; Cedar evaluates each hop atomically. |
-| 5 | **Cross-organizational / locally verifiable** | Partial | Evaluation is fully local (Cedarling runs in browsers, mobile, gateways; multi-issuer JWTs supported without shared IAM accounts). But the policy store is unilateral, that is \-- the verifier's. There is no standard or guidance for exchanging ~~or federating~~ policy semantics across organizations in an adhoc way, and trusted issuers must be pre-configured~~.~~, BUT core contributors do work to keep Janssen [in lockstep with AuthZEN](https://github.com/JanssenProject/jans/pull/13077) for federation and runtime issuer-list capabilities |
-| 6 | **Attenuated** | Partial | Forbid-overrides-permit gives monotonic restriction: layering additional forbid policies (or a stricter verifier-side policy set) can only shrink authority, never expand it. But Cedar has no runtime check that a delegatee's grant is a subset of the delegator's; subset/equivalence can be proven offline with Cedar's symbolic analysis tooling. Attenuation enforcement is a stack responsibility. |
-| 7 | **Self-revocable** (holder or somebody in chain) | Partial | Revocation is a policy store change (remove a permit or add a forbid), immediate at the next evaluation and very fine-grained. But it is performed by whoever administers the policy store, not natively by a delegator or delegatee in the chain; mapping chain participants to revocation rights is a stack design task. Cascade to downstream grants is not native either: it holds only if delegation is modeled as linked entities whose policy re-checks the ancestry. |
-| \+ | Authentication / proof of possession | No (out of scope) | Cedar does not authenticate. Cedarling validates JWT signatures (proof of issuance by a trusted issuer), which is not holder proof of possession; PoP binding is left to the token layer. |
+Each entry gives the requirement, the verdict, and the reasoning.
+
+**1. Attenuated.** Verdict: Partial.
+
+Forbid-overrides-permit gives monotonic restriction: layering additional forbid policies (or a stricter verifier-side policy set) can only shrink authority, never expand it. But Cedar has no runtime check that a delegatee's grant is a subset of the delegator's; subset/equivalence can be proven offline with Cedar's symbolic analysis tooling. Attenuation enforcement is a stack responsibility.
+
+**2. Accountable (agent vs. principal/operator).** Verdict: Yes (at the modeling level).
+
+The schema can type the distinction directly (e.g. `entity Agent in [User]`); Cedarling derives separate User and Workload principals from the `id_token` and `access_token` and can require both to be authorized. But the distinction is data the verifier trusts an Authorization Server and token exchange to provide, not a cryptographically attributable delegation edge.
+
+**3. Resistant to confused deputy.** Verdict: No.
+
+Identity-based by design: the deputy exercises its own standing permissions against a caller-designated resource, and the model does not combine designation with authorization. Policies can condition on request context to mitigate specific deputy scenarios, but that is mitigation, not structural immunity.
+
+**4. Represent authorization policies (embed/link; functional restrictions, re-delegation rules, advisory "please").** Verdict: Yes, except advisory.
+
+This is Cedar's core competence. "Do not delegate further" and re-delegation rules are expressible if delegation itself is modeled as an action. No advisory tier: decisions are binary permit/forbid, with no obligations or native "honor-if-possible" semantics.
+
+**5. Chainable.** Verdict: No (stack-dependent).
+
+No delegation primitive, no chain artifact. Delegation can be modeled as verifier-side **state** (entities or instantiated policy templates), but chains are not portable, signed, or first-class. In a delegation stack, the chain must live in the carrier or elsewhere in the Authorization stack; Cedar evaluates each hop atomically.
+
+**6. Cross-organizational / locally verifiable.** Verdict: Partial.
+
+Evaluation is fully local (Cedarling runs in browsers, mobile, gateways; multi-issuer JWTs supported without shared IAM accounts). But the policy store is unilateral; it belongs to the verifier. There is no standard or guidance for exchanging policy semantics across organizations in an ad hoc way, and trusted issuers must be pre-configured. Core contributors do work to keep Janssen [in lockstep with AuthZEN](https://github.com/JanssenProject/jans/pull/13077) for federation and runtime issuer-list features.
+
+**7. Self-revocable (holder or somebody in chain).** Verdict: Partial.
+
+Revocation is a policy store change (remove a permit or add a forbid), immediate at the next evaluation and very fine-grained. But it is performed by whoever administers the policy store, not natively by a delegator or delegatee in the chain; mapping chain participants to revocation rights is a stack design task. Cascade to downstream grants is not native either: it holds only if delegation is modeled as linked entities whose policy re-checks the ancestry.
+
+**8. Authentication / proof of possession (nice-to-have).** Verdict: No (out of scope).
+
+Cedar does not authenticate. Cedarling validates JWT signatures (proof of issuance by a trusted issuer), which is not holder proof of possession; PoP binding is left to the token layer.
 
 ### Cedar Evaluation
 
+#### Attenuated
+
+Cedar has one structural property that maps beautifully onto attenuation, and one missing property that prevents a full Yes.
+
+The structural property is **monotonic restriction by composition**: `forbid` overrides `permit`, and evaluation is over the union of all policies. Adding policies to a set can therefore only ever *shrink* what a forbid touches and a verifier (or any later layer) can stack stricter policy on top of a base grant with a guarantee that the stack cannot widen authority. This is a natural fit for the delegation-stack pattern in which each hop attaches further restrictions: express the delegator's grant as the base policy set and each subsequent restriction as additional forbids or narrower permits evaluated together.
+
+What is missing is **enforced subset semantics between grants**. If a delegation is represented as "delegatee gets policy set B, derived from delegator's policy set A", nothing in the Cedar runtime checks B ⊆ A; an over-broad B is just another valid policy set. The check is possible, and this is where Cedar is unique: its analyzability means "B permits nothing A does not" is a decidable question answerable by symbolic analysis tooling at delegation time or audit time. This is also what makes Cedar a candidate tool for checking that one set of caveats is a subset of another, whether or not Cedar is the runtime evaluator. But it is an offline/toolchain guarantee the stack must invoke, not a property the evaluator enforces per request the way a zCaps verifier enforces allowedAction narrowing.
+
+Expressiveness of attenuation, once enforced, is far richer than URL-suffix narrowing: any condition the language can state (attribute ranges, context conditions, time windows, resource groups) can be the attenuation axis. The same expressiveness is a hazard. The more axes a condition can range over, the easier it is to write a restriction that does not actually restrict, which is why the subset check matters.
+
 #### Accountable, agent vs. principal/operator
 
-Differentiation is a schema design choice, made trivially. Cedar entities are typed and hierarchical, so the agent/operator relationship can be modeled directly, for example `entity Agent in [User] { model: String, runtime: String, trust_level: String }`, which is exactly the pattern the Clawdrey case study uses: the agent is a typed principal nested under its human operator, and policies can condition on either or both. Cedarling operationalizes the same split out of the box: it constructs a **User** principal from the OIDC id\_token and a separate **Workload** principal from the OAuth access token (the software acting on behalf of the person, or autonomously), and its default decision logic can require that *both* the person and the workload be authorized for the request to proceed. That is precisely the agent-vs-operator distinction the matrix asks for, expressed natively in the data model rather than by convention.
+Differentiation is a schema design choice, made trivially. Cedar entities are typed and hierarchical, so the agent/operator relationship can be modeled directly, for example `entity Agent in [User] { model: String, runtime: String, trust_level: String }`, which is exactly the pattern the Clawdrey case study uses: the agent is a typed principal nested under its human operator, and policies can condition on either or both. Cedarling operationalizes the same split out of the box: it constructs a **User** principal from the OIDC `id_token` and a separate **Workload** principal from the OAuth access token (the software acting on behalf of the person, or autonomously), and its default decision logic can require that *both* the person and the workload be authorized for the request to proceed. That is precisely the agent-vs-operator distinction the matrix asks for, expressed natively in the data model rather than by convention.
 
 What Cedar does not provide is cryptographic accountability for the *delegation* itself. There is no signed delegation edge: the "fact" that operator O stands behind agent A is an entity attribute or a token claim that the verifier chose to trust. Attribution quality is therefore exactly the attribution quality of the surrounding identity layer (the JWT issuer, in Cedarling's case). An auditor can read the decision logs (Cedarling logs every decision with diagnostics) and reconstruct *which policy permitted which principal*, but cannot derive a non-repudiable "this delegator authorized this delegatee" proof from the Cedar artifacts alone. The accountable party for any grant is, structurally, the policy store administrator.
 
@@ -897,7 +955,7 @@ Evaluated as-is: no, and the exposure follows directly from the identity-based m
 
 Policies are first-class, schema-validated, and arbitrarily conditional on principal, action, resource and request context: attribute comparisons, group membership (`in`), set operations, string and IP functions, and explicit `forbid` statements that override any permit. Policies can be embedded with the verifier or distributed to it (Cedarling fetches signed policy stores over HTTPS or from a Lock Server), satisfying the embed-or-link condition.
 
-Against the matrix's specific examples:
+Against the commonly requested policy examples:
 
 * **"Do not delegate further" / "this permission is undelegatable":** expressible, with one precondition: delegation must be modeled as an action in the schema (e.g. `action delegate appliesTo { principal: [Agent], resource: [Permission] }`). Then `forbid (principal, action == Action::"delegate", resource == Permission::"x");` makes permission x undelegatable, and since forbid overrides permit, no later grant can reopen it. Depth limits are expressible the same way if depth is carried as an attribute. The precondition matters: Cedar can only forbid delegations that the stack routes through a Cedar check.  
 * **Re-delegation policies:** same mechanism, with the full expressiveness of the language (delegate only to principals in a given group, only with attenuated scopes, only before an expiry, and so on).  
@@ -923,17 +981,9 @@ Half of this requirement is Cedarling's headline feature; the other half is stru
 
 **Locally verifiable: yes.** Cedar evaluation requires no network call: policies, schema and entity data are in memory, and decisions are sub-millisecond (for simple policies only). Cedarling pushes this to the edge deliberately: a WASM/mobile/server-embeddable PDP that loads a policy store at startup and answers authorization questions locally, so an API gateway, browser or device enforces policy without phoning a central authorization server per request. JWT signature validation against trusted issuers is also local (cached JWKS).
 
+Distributing the policy store to the edge has a privacy cost. A Cedarling instance holds the whole store, including policies about other principals and whatever entity data is bundled with it. Anyone able to read the store (a browser user, a device owner, a compromised gateway) can learn who may do what. The exposure is comparable to the discovery risk noted for AuthZEN Search in the next chapter, and it argues for scoping each edge store to the principals and resources that edge actually serves.
+
 **Cross-organizational: partial.** Cedarling's TBAC model is genuinely multi-party at the *evidence* level: `authorize_multi_issuer` accepts JWTs from several different trusted issuers in one request and maps their claims to Cedar entities, so organization A's verifier can consume identity evidence issued by organization B without B having an account in A's IAM. But the *policy* level is unilateral: the policy store (schema, policies, trusted issuer list) belongs to the verifier alone. There is no standard for one organization to hand another a policy fragment with agreed semantics, no shared schema federation, and the trusted issuer list is pre-configuration, not dynamic trust establishment. Two organizations can interoperate, but only after bilateral setup; the matrix's "express authorization policies without accounts on each other's IAM systems" is met for authentication evidence and unmet for policy exchange.
-
-#### Attenuated
-
-Cedar has one structural property that maps beautifully onto attenuation, and one missing property that prevents a full Yes.
-
-The structural property is **monotonic restriction by composition**: `forbid` overrides `permit`, and evaluation is over the union of all policies. Adding policies to a set can therefore only ever *shrink* what a forbid touches and a verifier (or any later layer) can stack stricter policy on top of a base grant with a guarantee that the stack cannot widen authority. This is a natural fit for the delegation-stack pattern in which each hop attaches further restrictions: express the delegator's grant as the base policy set and each subsequent restriction as additional forbids or narrower permits evaluated together.
-
-What is missing is **enforced subset semantics between grants**. If a delegation is represented as "delegatee gets policy set B, derived from delegator's policy set A", nothing in the Cedar runtime checks B ⊆ A; an over-broad B is just another valid policy set. The check is possible, and this is where Cedar is unique: its analyzability means "B permits nothing A does not" is a decidable question answerable by symbolic analysis tooling at delegation time or audit time. But it is an offline/toolchain guarantee the stack must invoke, not a property the evaluator enforces per request the way a zCaps verifier enforces allowedAction narrowing.
-
-Expressiveness of attenuation, once enforced, is far richer than URL-suffix narrowing: any condition the language can state (attribute ranges, context conditions, time windows, resource groups) can be the attenuation axis.
 
 #### Self-revocable
 
@@ -949,7 +999,9 @@ Net: revocation is a strength of the centralized-policy model (no token to chase
 
 A clear yes. Cedar evaluates every request against the union of all loaded policies; an Allow needs at least one satisfied permit and no satisfied forbid, and the satisfied permit(s) can originate from any source loaded into the store. Principals can belong to arbitrarily many groups and roles simultaneously (the matrix's RBAC single-role counter-example does not apply: Cedar's `in` hierarchy is a DAG, not a single assignment). Cedarling extends composition to the evidence layer: `authorize_multi_issuer` lets one request carry tokens from multiple independent issuers, each mapped to entities, so authority deriving from several principals or organizations is combined in a single decision.
 
-The one caveat mirrors row 5: all the composed sources must already be present in (or mapped into) the verifier's policy store and trusted issuer configuration by stable identifiers. Composition is native at decision time, but onboarding a new source of authority is configuration.
+The same property underlies the confused deputy exposure recorded above. Because a decision draws on every permit the principal holds anywhere in the store, a deputy's own standing permissions are always in scope, including for a request it did not originate.
+
+The one caveat mirrors row 6: all the composed sources must already be present in (or mapped into) the verifier's policy store and trusted issuer configuration by stable identifiers. Composition is native at decision time, but onboarding a new source of authority is configuration.
 
 ### Nice-to-haves
 
@@ -959,9 +1011,9 @@ Out of scope for Cedar by design: the engine assumes the principal has already b
 
 ### Summary
 
-Cedar is, almost row by row, the complement of the capability-based technologies in this survey. It is strongest exactly where zCaps are weakest: rich, analyzable, schema-validated policy expression (including "undelegatable" and re-delegation rules), native agent-vs-operator modeling, composition of authority from multiple sources in one decision, fine-grained immediate revocation, and fully local evaluation at the edge. It is weakest exactly where zCaps are strongest: there is no delegation chain, no portable signed grant, no holder-side revocation, no offline delegation, and no cryptographic attribution of who authorized whom; all of these are verifier-side state administered through a policy store.
+Cedar is, almost row by row, the complement of the capability-based technologies in this survey. It is strongest exactly where zCaps are weakest: rich, analyzable, schema-validated policy expression (including re-delegation rules), native agent-vs-operator modeling, composition of authority from multiple sources in one decision, fine-grained immediate revocation, and fully local evaluation at the edge. It is weakest exactly where zCaps are strongest: there is no delegation chain, no portable signed grant, no holder-side revocation, no offline delegation, and no cryptographic attribution of who authorized whom; all of these are verifier-side state administered through a policy store. One further caution applies to any attribute-based policy, Cedar included. When a principal's attribute changes, the set of permissions that change with it is not visible from the attribute itself, so a routine attribute update can silently grant or remove access. Cedar's analyzability makes such effects discoverable, but only if someone runs the analysis.
 
-For delegated authorization for AI agents, the implication is that Cedar is not a candidate *delegation data model* but a strong candidate *policy layer inside one*: a carrier technology supplies the chain, proof and portability, while Cedar supplies the rulebook each hop is checked against, with the unusual bonus that those rules can be formally analyzed (delegation attenuation provable offline). The Cedarling deployment shows the integration pattern already in production form (policies travel to the edge, identity evidence travels as multi-issuer JWTs, decisions stay local), and the Clawdrey case study shows the agentic pattern (operator-authored Cedar policies as the hard boundary on an autonomous agent's action space). What no current Cedar deployment shows is the missing piece the matrix cares most about: a standardized way for a delegator to hand a delegatee a portable, attenuated, chain-verifiable grant.
+For delegated authorization for AI agents, the implication is that Cedar is not a candidate *delegation data model* but a strong candidate component beside one, in two distinct roles. The first is to express the caveats carried in a capability chain and to guarantee, by offline analysis, that no delegation relaxes the caveats of its parent. The second is to decide, at the root of a chain, which capabilities a resource owner should hand to which authenticated principal. In both roles a carrier technology supplies the chain, proof and portability, while Cedar supplies the rulebook, with the unusual bonus that those rules can be formally analyzed. The Cedarling deployment shows the integration pattern already in production form (policies travel to the edge, identity evidence travels as multi-issuer JWTs, decisions stay local), and the Clawdrey case study shows the agentic pattern (operator-authored Cedar policies as the hard boundary on an autonomous agent's action space). What no current Cedar deployment shows is the missing piece the matrix cares most about: a standardized way for a delegator to hand a delegatee a portable, attenuated, chain-verifiable grant.
 
 ### References
 
@@ -973,13 +1025,13 @@ For delegated authorization for AI agents, the implication is that Cedar is not 
   * [Terms & concepts](https://docs.cedarpolicy.com/overview/terminology.html) — entities, typed UIDs, the entity hierarchy, static vs. template-linked policies, RBAC/ABAC/ReBAC framing.  
   * [Policy templates](https://docs.cedarpolicy.com/policies/templates.html) and [Roles with policy templates](https://docs.cedarpolicy.com/bestpractices/bp-implementing-roles-templates.html) — `?principal` / `?resource` slots, template-linked policies as a runtime grant mechanism, and their coupling to user life-cycle management (the "delegation as template instantiation" argument).  
 * [Cedar: A New Language for Expressive, Fast, Safe, and Analyzable Authorization (extended version, arXiv 2403.04651)](https://arxiv.org/pdf/2403.04651) — the design paper; basis for the non-Turing-complete / formally-verified / analyzable claims and the two-slot template restriction.  
-* [cedar-policy/cedar (GitHub)](https://github.com/cedar-policy/cedar) and [cedar\_policy crate (docs.rs)](https://docs.rs/cedar-policy) — reference implementation; entity store model, local in-process evaluation, validator/typechecking.
+* [cedar-policy/cedar (GitHub)](https://github.com/cedar-policy/cedar) and [cedar_policy crate (docs.rs)](https://docs.rs/cedar-policy) — reference implementation; entity store model, local in-process evaluation, validator/typechecking.
 
 
 #### Janssen Project Cedarling (the deployed embedding)
 
 * [Cedarling overview / getting started](https://docs.jans.io/stable/cedarling/) — embeddable PDP on the Rust Cedar engine, WASM/mobile/server bindings, Token-Based Access Control, local edge evaluation.  
-* [Authorization using Cedarling](https://docs.jans.io/v1.15.0/cedarling/reference/cedarling-authz/) — derivation of separate User (id\_token) and Workload (access\_token) principals, the "person AND workload must be authorized" decision logic, JWT validation steps.  
+* [Authorization using Cedarling](https://docs.jans.io/v1.15.0/cedarling/reference/cedarling-authz/) — derivation of separate User (`id_token`) and Workload (`access_token`) principals, the "person AND workload must be authorized" decision logic, JWT validation steps.  
 * [Cedarling getting started — multi-issuer authorization](https://docs.jans.io/head/cedarling/tutorials/cedarling-getting-started/) — `authorize_multi_issuer` and `authorize_unsigned` methods; multiple trusted issuers in one request.  
 * [Policy Store](https://docs.jans.io/head/cedarling/cedarling-policy-store/) — schema \+ policies \+ trusted issuers bundle, claim mapping, role mapping; loaded as static JSON or fetched over HTTPS / from a Lock Server.
 
@@ -1007,24 +1059,55 @@ The broader AuthZEN ecosystem currently includes three complementary specificati
 
 It is important to note that these specifications are not all at the same level of maturity. AuthZEN Authorization API 1.0 is a Final Specification and serves as the normative foundation for this assessment. By contrast, COAZ and COAZ-MCP are currently Draft 1 specifications, while the AuthZEN Policy Store Format remains a working draft ([GitHub Repo](https://github.com/nynymike/AuthZen_Policy_Store/tree/main)). Accordingly, any assessment of the broader AuthZEN ecosystem should be understood as including current draft specifications in addition to the finalized Core specification.
 
-The evaluation therefore follows a layered approach. Each criterion is first assessed against the capabilities provided by the Core specification alone. Where relevant, the analysis then identifies how Policy Store, COAZ, or COAZ-MCP materially strengthen, clarify, extend, or operationalize those capabilities. This distinction prevents ecosystem features from being incorrectly attributed to the core protocol while still allowing AuthZEN to be evaluated as a practical authorization framework for agentic systems.
+The evaluation therefore follows a layered approach. Each criterion is first assessed against the functionality provided by the Core specification alone. Where relevant, the analysis then identifies how Policy Store, COAZ, or COAZ-MCP materially strengthen, clarify, extend, or operationalize that functionality. This distinction prevents ecosystem features from being incorrectly attributed to the core protocol while still allowing AuthZEN to be evaluated as a practical authorization framework for agentic systems.
 
-Many of the entries in the scorecard are marked as No, but this does not imply that AuthZEN is poorly suited to agentic authorization. Rather, they reflect the fact that AuthZEN addresses a different layer of the problem. Its primary role is to standardize runtime access decisions and PEP/PDP interoperability. Delegation chains, attenuation, revocation, and related capabilities remain the responsibility of capability systems or delegation model provided elsewhere in the architecture. As explained in the Overview chapter, an agent's required permissions cannot be fully known in advance, making least privilege dynamic. AuthZEN's access evaluation and search model is directly relevant to that problem because decisions can be made against the concrete action, resource, and context at execution time. Therefore, rather than representing a limitation, this can be considered a distinctive strength of AuthZEN, enabling it to be used without violating the requirements of agentic systems.
+Many of the entries in the scorecard are marked as No. In part this reflects that AuthZEN addresses a different layer of the problem. Its primary role is to standardize runtime access decisions and PEP/PDP interoperability, and delegation chains, attenuation, and revocation are left to a capability system or delegation model elsewhere in the architecture. One No is substantive, however. An AuthZEN decision is drawn from the subject's standing permissions, so on its own AuthZEN is an ambient authority framework and is subject to the confused deputy problem. Its fit in a delegation stack is therefore at the edges rather than at the point of access. It can serve as the interface through which a resource owner's policy engine decides which capabilities to hand out to which authenticated principal. And, inside a resource's own verifier, it can evaluate the concrete action, resource, and context of a request at execution time, which is relevant to the dynamic least-privilege problem the Introduction describes.
 
 ### Scorecard
 
-| \# | Requirement | Verdict | Notes |
-| :---- | :---- | :---- | :---- |
-| 1 | Accountable (agent vs. principal/operator) | Partial | AuthZEN core can identify a subject but does not standardize relationship between the responsible-principal and the agent. COAZ-MCP explicitly separates human subject and agent context, which improves agent accountability. However, it does not establish a delegation proof or legal-operator binding. |
-| 2 | Resistant to confused deputy | Partial (deployment-dependent) | AuthZEN evaluates explicit Subject-Action-Resource tuples and supports resource-specific authorization decisions. COAZ and COAZ-MCP further bind authorization to protocol inputs and trust-anchored identities. However, the ecosystem lacks delegation artifacts and end-to-end cryptographic delegation chains, leaving confused-deputy resistance dependent on correct PEP behavior and deployment architecture. |
-| 3 | Represent authorization policies (embed/link; "undelegatable", re-delegation rules, advisory "please") | No for core (out of scope); Partial with ecosystem | Policy language, architecture, and state management of the PDP are outside the scope of AuthZEN. The ecosystem improves policy-artifact portability and request-binding interoperability through Policy Store, COAZ, and COAZ-MCP. However, authorization-policy semantics remain policy-engine-specific and are not inherently interoperable across policy engines or organization. |
-| 4 | Chainable | No | Verdict is "No" because it is not a delegation framework. Not because it is incompatible with delegation frameworks. Neither the core data model nor COAZ-MCP contains a normative parent grant, delegator, delegatee, delegation edge, parent capability, or proof-chain primitive. COAZ-MCP improves subject/agent attribution, but not multi-hop delegation. [Access Evaluations](https://openid.net/specs/authorization-api-1_0.html#name-access-evaluations-api) support request batching (boxcarring) but not chaining. Each evaluation is processed independently and cannot depend on the outcome of another evaluation in the same request. |
-| 5 | Cross-organizational / locally verifiable | Partial (deployment-dependent) | Enable cross-vendor permission request/decision interoperability. Cross-organizational use is possible through a trusted remote PDP, but AuthZEN does not standardize policy exchange or provide locally verifiable proof of delegated authority. The receiving organization relies on the remote PDP's decision. |
-| 6 | Attenuated | No | The core API has no native delegation or attenuation model. The broader ecosystem also does not establish that downstream authority is a non-widening subset of upstream authority. Any attenuation must therefore be implemented by the underlying policy engine and data model, not by AuthZEN itself. |
-| 7 | Self-revocable (holder or anyone in chain) | No | No native self-revocation of delegated authority. Revocation is a responsibility of surrounding policy/token/delegation systems. Policy changes can revoke access, but this is different from delegation-chain self-revocation by the delegator or holder. |
-| \+ | Authentication / Proof of Possession | No (out of scope) | AuthZEN relies on external authentication mechanisms and does not define holder proof-of-possession for delegated authority. |
+Each entry gives the requirement, the verdict, and the reasoning.
+
+**1. Attenuated.** Verdict: No.
+
+The core API has no native delegation or attenuation model. The broader ecosystem also does not establish that downstream authority is a non-widening subset of upstream authority. Any attenuation must therefore be implemented by the underlying policy engine and data model, not by AuthZEN itself.
+
+**2. Accountable (agent vs. principal/operator).** Verdict: Partial.
+
+AuthZEN core can identify a subject but does not standardize relationship between the responsible-principal and the agent. COAZ-MCP separates the human subject from the agent context, so a decision record names both parties, which improves attribution. It does not establish a delegation proof or legal-operator binding.
+
+**3. Resistant to confused deputy.** Verdict: No.
+
+AuthZEN evaluates explicit Subject-Action-Resource tuples, but the decision is drawn from the subject's standing permissions, with the caller-designated resource as a separate input. That is the confused deputy condition. COAZ and COAZ-MCP make the request reflect the actual operation but do not change whose authority answers it.
+
+**4. Represent authorization policies (embed/link; functional restrictions, re-delegation rules, advisory "please").** Verdict: No for core (out of scope); Partial with ecosystem.
+
+Policy language, architecture, and state management of the PDP are outside the scope of AuthZEN. The ecosystem improves policy-artifact portability and request-binding interoperability through Policy Store, COAZ, and COAZ-MCP. However, authorization-policy semantics remain policy-engine-specific and are not inherently interoperable across policy engines or organization.
+
+**5. Chainable.** Verdict: No.
+
+Verdict is "No" because it is not a delegation framework, not because it is incompatible with delegation frameworks. Neither the core data model nor COAZ-MCP contains a normative parent grant, delegator, delegatee, delegation edge, parent capability, or proof-chain primitive. COAZ-MCP improves subject/agent attribution, but not multi-hop delegation. [Access Evaluations](https://openid.net/specs/authorization-api-1_0.html#name-access-evaluations-api) support request batching (boxcarring) but not chaining. Each evaluation is processed independently and cannot depend on the outcome of another evaluation in the same request.
+
+**6. Cross-organizational / locally verifiable.** Verdict: No.
+
+Enables cross-vendor request/decision interoperability. Use across organizations requires trusting a remote PDP or federating identities, which merges the parties into one trust domain. There is no locally verifiable proof of delegated authority.
+
+**7. Self-revocable (holder or anyone in chain).** Verdict: No.
+
+No native self-revocation of delegated authority. Revocation is a responsibility of surrounding policy/token/delegation systems. Policy changes can revoke access, but this is different from delegation-chain self-revocation by the delegator or holder.
+
+**8. Authentication / Proof of Possession (nice-to-have).** Verdict: No (out of scope).
+
+AuthZEN relies on external authentication mechanisms and does not define holder proof-of-possession for delegated authority.
 
 ### Detailed Evaluation
+
+#### Attenuated
+
+The Core alone can express narrowly scoped, context-sensitive access questions through SARC, making it well suited to runtime least-privilege enforcement. However, as with the previous sections, given the scope of the specification, neither monotonic attenuation nor the prevention of authority widening across delegation hops is defined by AuthZEN itself.
+
+Adding the three ecosystem specifications does not improve support for attenuation. As discussed in the previous sections, the Policy Store does not establish parent-child delegation semantics or a monotonic subset invariant. COAZ strengthens the trustworthy construction of fine-grained authorization inputs, but it explicitly preserves AuthZEN request semantics rather than defining delegation semantics. COAZ-MCP extends this mapping framework to MCP, and its controls can enforce constraints supplied by policy. However, none of these specifications establishes that a child delegation cannot exceed the authority of its parent.
+
+Thus, AuthZEN provides strong runtime enforcement for attenuated authority defined and validated elsewhere, but it does not provide native delegation attenuation.
 
 #### Accountable (agent vs. principal/operator)
 
@@ -1038,13 +1121,15 @@ COAZ strengthens the trustworthiness of this model through mapping controls and 
 
 Thus, the ecosystem improves agent-versus-principal attribution and identity provenance, but it still falls short of providing interoperable delegation provenance and multi-hop accountability.
 
+Two agentic patterns have no standard expression in the Core. An agent that starts another agent cannot record the parent in the Subject, since a request carries one Subject. The relationship can only go into Context, with implementation-specific meaning (Issue \#416, discussed under Chainable, asks for exactly this). Short-lived agents fare worse. A decision can only be made about a Subject the PDP's identity data already knows, so every agent, however brief its life, must be provisioned in the identity layer before it can be authorized. That is the provisioning cost the Introduction identifies as unworkable at agentic scale.
+
 #### Resistant to confused deputy
 
-AuthZEN's [data model](https://openid.net/specs/authorization-api-1_0.html#name-information-model) provides a structural foundation for confused-deputy resistance because every Access Evaluation request identifies a required Subject, Action, and Resource, with optional Context. [Resource](https://openid.net/specs/authorization-api-1_0.html#name-resource) represents the target, while [Action](https://openid.net/specs/authorization-api-1_0.html#name-action) represents the intended operation and may contain operation parameters. Consequently, AuthZEN can ask "may this subject perform this specific action on this specific resource?" rather than merely checking whether an identity has a generic role. However, the API does not define how the PEP derives these values from the actual invocation. Subject, Resource, and Action attributes are supplied by the PEP, API authentication is out of scope, and enforcement remains the PEP's responsibility. Therefore, AuthZEN alone neither proves that the Resource/Action matches what the upstream requester designated nor ensures that the authority used for a downstream operation is the authority intended by the requester rather than the deputy's own ambient authority.
+AuthZEN's [data model](https://openid.net/specs/authorization-api-1_0.html#name-information-model) asks "may this subject perform this action on this resource?", with optional Context. [Resource](https://openid.net/specs/authorization-api-1_0.html#name-resource) names the target and [Action](https://openid.net/specs/authorization-api-1_0.html#name-action) the operation, which allows resource-specific decisions rather than role checks. This is the shape of the confused deputy problem, not a defense against it. The resource is one input and the permission is the output. The decision is drawn from the subject's own standing permissions, and nothing binds the resource the caller designated to the authority being used. The PEP constructs Subject, Resource, and Action from the invocation, API authentication is out of scope, and enforcement is the PEP's responsibility. A deputy acting on a caller-supplied resource is therefore authorized whenever its own permissions cover that resource. That is ambient authority.
 
-COAZ and COAZ-MCP provide procedural binding between an invocation, the constructed authorization request, and the resulting authorization decision, reducing the likelihood that designation is lost and authorization decisions become based on the deputy's ambient authority. COAZ requires [bindings](https://openid.github.io/authzen/authzen-coaz-framework-1_0.html#name-information-model-and-input) to specify the source and structure of input variables, treats mapping inputs as potentially untrusted, provides a mechanism for [trust-anchored fields](https://openid.github.io/authzen/authzen-coaz-framework-1_0.html#name-trust-anchored-fields), and requires mapping inconsistencies or evaluation failures to be treated as [mapping errors](https://openid.github.io/authzen/authzen-coaz-framework-1_0.html#name-denials-and-errors). COAZ-MCP binds MCP [tool names, arguments, resource URIs, token claims](https://openid.github.io/authzen/authzen-coaz-mcp-binding-1_0.html#name-information-model), and [server audience information](https://openid.github.io/authzen/authzen-coaz-mcp-binding-1_0.html#name-default-mappings) into authorization requests. Its trust-anchored [subject.id](https://openid.github.io/authzen/authzen-coaz-mcp-binding-1_0.html#name-the-subject-identity-claim) may be verified against the designated subject-identity claim, while [declared mappings](https://openid.github.io/authzen/authzen-coaz-mcp-binding-1_0.html#name-declared-mappings) allow authorization policies to incorporate tool parameters directly.
+COAZ and COAZ-MCP ensure that the authorization request reflects the actual operation. COAZ requires [bindings](https://openid.github.io/authzen/authzen-coaz-framework-1_0.html#name-information-model-and-input) to specify the source and structure of input variables, treats mapping inputs as potentially untrusted, provides a mechanism for [trust-anchored fields](https://openid.github.io/authzen/authzen-coaz-framework-1_0.html#name-trust-anchored-fields), and requires mapping inconsistencies or evaluation failures to be treated as [mapping errors](https://openid.github.io/authzen/authzen-coaz-framework-1_0.html#name-denials-and-errors). COAZ-MCP binds MCP [tool names, arguments, resource URIs, token claims](https://openid.github.io/authzen/authzen-coaz-mcp-binding-1_0.html#name-information-model), and [server audience information](https://openid.github.io/authzen/authzen-coaz-mcp-binding-1_0.html#name-default-mappings) into authorization requests, with a trust-anchored [subject.id](https://openid.github.io/authzen/authzen-coaz-mcp-binding-1_0.html#name-the-subject-identity-claim) and [declared mappings](https://openid.github.io/authzen/authzen-coaz-mcp-binding-1_0.html#name-declared-mappings) that expose tool parameters to policy. This improves the fidelity of the question asked. It does not change whose authority answers it. The question is still evaluated against the deputy's permissions at the moment of the call, with the caller-designated resource as an input.
 
-Taken together, these ecosystem specifications strengthen the preservation of requester intent and reduce the risk that access decisions become detached from the actual operation being performed. However, they still lack a cryptographically transferable designation-and-authority artifact and end-to-end attenuating delegation chain. Consequently, confused-deputy resistance remains partial and deployment-dependent.
+Confused-deputy resistance requires a designation-and-authority artifact that travels with the request, which neither the Core nor the ecosystem defines. The verdict is No.
 
 #### Represent authorization policies
 
@@ -1058,33 +1143,23 @@ None of these specifications defines a common authorization-policy language or s
 
 #### Chainable
 
-If being chainable is interpreted as preserving delegated authority across multiple hops, AuthZEN and its current ecosystem do not provide a standardized delegation-chain model. Delegated authority remains external to the AuthZEN interoperability model. The same observation largely applies to provenance reconstruction. However, AuthZEN itself should not be interpreted as an impersonation-oriented model. Although it does not solve multi-hop delegation, neither does it force workflows into impersonation. Instead, AuthZEN can consume and evaluate externally provided delegation-related context as part of a delegated-authority workflow.
+If being chainable is interpreted as preserving delegated authority across multiple hops, AuthZEN and its current ecosystem do not provide a standardized delegation-chain model. Delegated authority remains external to the AuthZEN interoperability model. The same observation largely applies to provenance reconstruction. However, AuthZEN itself should not be interpreted as an impersonation-oriented model. Although it does not solve multi-hop delegation, neither does it force workflows into impersonation. Instead, AuthZEN can consume and evaluate externally provided delegation-related context as part of a delegated-authority workflow. Because that context is outside the specification, its meaning is implementation-dependent, and two deployments that both carry delegation context need not interpret it the same way. Delegated authority consumed this way is not interoperable.
 
 The [Access Evaluations API](https://openid.net/specs/authorization-api-1_0.html#name-access-evaluations-api) should likewise not be interpreted as delegation chaining. It supports batching (boxcarring) of authorization requests, but each evaluation remains an independent authorization decision. Multiple evaluations do not create, transfer, attenuate, or propagate authority between actors. Consequently, request batching is fundamentally different from a genuine delegation chain and should not receive chainability credit.
 
 The ecosystem specifications improve interoperability but do not materially change this conclusion. Policy Store, COAZ, and COAZ-MCP improve portability, interoperability, and attribution, but none of them define delegated authority as a first-class, verifiable artifact across multiple hops. Nevertheless, like AuthZEN itself, they do not inherently force delegated-authority workflows into impersonation.
 
-[AuthZEN Issue \#416 "\[Feature Request\] Add 'delegation\_chain' to Subject for AI Agent and Multi-Actor Scenarios"](https://github.com/openid/authzen/issues/416) further illustrates this point, which proposes introducing a delegation\_chain structure for AI-agent scenarios. The proposal explicitly argues that the current subject model cannot adequately represent multi-hop delegation chains involving users, agents, and downstream services. This should not be interpreted as existing support. Instead, it demonstrates that delegation provenance and multi-hop authority flow are recognized gaps in the current model.
+[AuthZEN Issue \#416 "\[Feature Request\] Add 'delegation\_chain' to Subject for AI Agent and Multi-Actor Scenarios"](https://github.com/openid/authzen/issues/416) further illustrates this point, which proposes introducing a `delegation_chain` structure for AI-agent scenarios. The proposal explicitly argues that the current subject model cannot adequately represent multi-hop delegation chains involving users, agents, and downstream services. This should not be interpreted as existing support. Instead, it demonstrates that delegation provenance and multi-hop authority flow are recognized gaps in the current model.
 
 Accordingly, if chainability is viewed as a property of delegated authority itself rather than authorization interoperability, AuthZEN should still receive No. Nevertheless, the reason is not that AuthZEN prevents delegation chains or requires impersonation. AuthZEN deliberately operates at a different architectural layer. It can evaluate and enforce authorization decisions informed by delegated-authority context, but the delegation chain itself, including attenuation, provenance, chain verification, and revocation semantics, must be supplied by another system. AuthZEN is therefore best characterized as a consumer of delegation chains rather than a provider of delegation chains.
 
 #### Cross-organizational / locally verifiable
 
-The Core enables authorization interoperability across organizational boundaries and the ecosystem improves it, but participating organizations must separately establish trust in the relevant token issuers, [identity claims](https://openid.github.io/authzen/authzen-coaz-mcp-binding-1_0.html#name-the-subject-identity-claim), and PDPs. ([COAZ Trust-Anchored fields](https://openid.github.io/authzen/authzen-coaz-framework-1_0.html#name-trust-anchored-fields) improve input trustworthiness but do not establish cross-organizational trust.) The Core does not define how such cross-organizational trust is established, and policy semantics remain external to the AuthZEN ecosystem.
+A PDP makes access decisions for its own organization's resources. The Core makes the request and decision formats interoperable across vendors, so an organization can swap PDP products or combine PEPs and PDPs from different suppliers. That is cross-vendor interoperability, not cross-organizational execution.
 
-The [Access Evaluation API](https://openid.net/specs/authorization-api-1_0.html#name-access-evaluation-api) returns an access decision, but not the underlying proof needed for another organization to independently validate why that decision was made. Nor do Policy Store, COAZ, or COAZ-MCP define such an authorization-proof format. AuthZEN ultimately relies on an access decision made by a PDP.
+For a second organization to rely on an AuthZEN decision, it must trust the first organization's PDP, together with its token issuers and [identity claims](https://openid.github.io/authzen/authzen-coaz-mcp-binding-1_0.html#name-the-subject-identity-claim). ([COAZ Trust-Anchored fields](https://openid.github.io/authzen/authzen-coaz-framework-1_0.html#name-trust-anchored-fields) improve input trustworthiness but do not establish that trust.) Trusting a remote PDP, or federating identities, merges the two parties into a single trust domain whose boundary happens to span two companies. It does not let them operate as independent domains.
 
-Consequently, an organization can operate its own PDP locally, and organizations can integrate their authorization systems across organizational boundaries, but neither outcome constitutes local verification of authorization evidence. The receiving organization still relies on the PDP that made the access decision and on the separately configured identity and token trust infrastructure, rather than independently verifying a transferable delegation or authorization artifact. The criterion is therefore rated Partial.
-
-Cross-organizational deployments can be strengthened by combining AuthZEN with external trust frameworks for issuer trust, identity federation, key discovery, delegation credentials, and shared policy semantics, while continuing to use AuthZEN as the interoperable authorization layer connecting otherwise independent trust and policy domains.
-
-#### Attenuated
-
-The Core alone can express narrowly scoped, context-sensitive access questions through SARC, making it well suited to runtime least-privilege enforcement. However, as with the previous sections, given the scope of the specification, neither monotonic attenuation nor the prevention of authority widening across delegation hops is defined by AuthZEN itself.
-
-Adding the three ecosystem specifications does not improve support for attenuation. As discussed in the previous sections, the Policy Store does not establish parent-child delegation semantics or a monotonic subset invariant. COAZ strengthens the trustworthy construction of fine-grained authorization inputs, but it explicitly preserves AuthZEN request semantics rather than defining delegation semantics. COAZ-MCP extends this mapping framework to MCP, and its controls can enforce constraints supplied by policy. However, none of these specifications establishes that a child delegation cannot exceed the authority of its parent.
-
-Thus, AuthZEN provides strong runtime enforcement for attenuated authority defined and validated elsewhere, but it does not provide native delegation attenuation.
+The [Access Evaluation API](https://openid.net/specs/authorization-api-1_0.html#name-access-evaluation-api) returns a decision, not evidence that another party could verify independently, and neither Policy Store, COAZ, nor COAZ-MCP defines an authorization-proof format. There is nothing to verify locally except the PDP's own answer. The criterion is therefore rated No. An organization that must accept delegated authority from parties it does not federate with needs a delegation credential from outside the AuthZEN ecosystem. AuthZEN can then serve as the decision interface inside each party's own verifier.
 
 #### Self-revocable
 
@@ -1092,7 +1167,7 @@ The core specification provides no protocol mechanism by which a holder or an an
 
 The specification also defines no revocation-state object, revocation-propagation protocol, cache-invalidation mechanism, network-partition behavior, or maximum revocation latency. Although expiration timestamps or other short-lived authorization evidence may be supplied as [contextual input](https://openid.net/specs/authorization-api-1_0.html#name-context) by an implementation, this represents expiration rather than explicit revocation and is not standardized by the API.
 
-The ecosystem does not add delegation-chain self-revocation capabilities. The Policy Store specification allows administrators to upload [immutable, versioned Policy Store](https://htmlpreview.github.io/?https://github.com/nynymike/AuthZen_Policy_Store/blob/main/draft-schwartz-authzen-policy-store.html#name-policy-store-api) packages through a [POST-only Policy Store API](https://htmlpreview.github.io/?https://github.com/nynymike/AuthZen_Policy_Store/blob/main/draft-schwartz-authzen-policy-store.html#name-api-request), while existing policy stores cannot be updated or deleted. This supports policy deployment, versioning, and rollback, but not holder- or ancestor-initiated revocation. COAZ defines how protocol-specific information models are mapped into AuthZEN authorization requests, but it introduces neither delegation lineage nor revocation operations. Similarly, COAZ-MCP does not define holder- or ancestor-driven revocation, child-selective revocation, cascading revocation semantics, or guarantees regarding cache consistency, revocation propagation, or network partitions.
+The ecosystem does not add delegation-chain self-revocation functionality. The Policy Store specification allows administrators to upload [immutable, versioned Policy Store](https://htmlpreview.github.io/?https://github.com/nynymike/AuthZen_Policy_Store/blob/main/draft-schwartz-authzen-policy-store.html#name-policy-store-api) packages through a [POST-only Policy Store API](https://htmlpreview.github.io/?https://github.com/nynymike/AuthZen_Policy_Store/blob/main/draft-schwartz-authzen-policy-store.html#name-api-request), while existing policy stores cannot be updated or deleted. This supports policy deployment, versioning, and rollback, but not holder- or ancestor-initiated revocation. COAZ defines how protocol-specific information models are mapped into AuthZEN authorization requests, but it introduces neither delegation lineage nor revocation operations. Similarly, COAZ-MCP does not define holder- or ancestor-driven revocation, child-selective revocation, cascading revocation semantics, or guarantees regarding cache consistency, revocation propagation, or network partitions.
 
 #### Authentication / Proof of Possession
 
@@ -1122,6 +1197,8 @@ AuthZEN can serve as a strong runtime authorization and policy-decision layer wi
 
 However, AuthZEN is not a delegated-authority system. Delegation semantics, including delegation proof, attenuation, and revocation, remain outside the scope of Authorization API 1.0 and are provided by other components of the overall architecture. Likewise, policy representation is intentionally left to the underlying PDP implementation.
 
+Put plainly, AuthZEN on its own is an ambient authority framework. A PDP answers from the subject's standing permissions, and nothing in the protocol binds the caller's designation of a resource to the authority used. It should not be the sole basis for access decisions in a delegation stack. Its appropriate roles are deciding which capabilities to hand out to an authenticated principal, and serving as the internal decision interface of a resource's own verifier.
+
 Understanding these boundaries is important when comparing AuthZEN with policy frameworks such as Cedar and delegation-focused approaches such as UCAN and zCAP.
 
 ### References
@@ -1143,63 +1220,142 @@ The preceding chapters evaluated each specification on its own terms. This chapt
 The surveyed specs are not seven competitors for one job. They fall into three families, distinguished by where authority lives:
 
 * Certificate capabilities (zCaps, UCANs, and KYA-OS, which profiles zCaps inside Verifiable Credentials). Authority lives in a portable, signed artifact. The delegatee holds it, can attenuate and re-delegate it offline, and presents it with proof of key possession. The verifier checks the chain locally; no authorization server exists. KYA-OS adds an identity and audit layer around that artifact and is the one member that resolves the chain from a registry rather than carrying it.  
-* Server-mediated authorization (the OAuth 2.0/2.1 lineage, AAuth). Authority lives in a server: the OAuth Authorization Server, or AAuth's Person Server with its mission state. Tokens reference that authority rather than embodying it, and delegation, attenuation, and revocation are acts performed at or by the server.  
+* Server-mediated authorization (the OAuth 2.0/2.1 lineage, AAuth). Authority lives in a server: the OAuth Authorization Server, or AAuth's Person Server with its mission state. Tokens reference that authority rather than embodying it, and delegation, attenuation, and revocation are acts performed at or by the server. An Authorization Server performing Token Exchange could keep the full delegation chain (the act claim is designed to carry it), though we know of no deployment that exposes such a record. OAuth access tokens are also frequently used in practice as identity assertions, which pulls such deployments toward the policy decision family.  
 * Policy decision systems (Cedar, AuthZEN). Authority lives in the verifier's policy store. There is no token of authority at all; the request presents identity evidence and the verifier evaluates rules it already holds. Cedar is the family's policy language. AuthZEN is its wire protocol, standardizing how an enforcement point (PEP) asks a decision point (PDP) for a verdict. The two cover complementary layers of the same architecture, much as zCaps and UCANs do for the certificate family.
+
+One further distinction cuts across the families. Object-reference capabilities (listed in the Introduction) are invocation-centric: a delegation happens only by passing the reference as a parameter of an invocation. The certificate systems surveyed here are delegation-centric: a delegation is an act of its own, performed outside any invocation other than delivering the certificate. The server-mediated systems sit closer to the invocation-centric model, since a delegation is itself a protocol call on the server.
 
 The families also differ in which of the specification types from the Introduction (data model, protocol, possession mechanism, chainable proof methods) each spec actually covers. Much of the apparent unevenness between chapters reflects this: the chapters describe different layers of a potential stack, not six answers to the same question.
 
-| Spec | Data model | Protocol | Possession mechanism | Chainable proofs | Policy language |
-| :---- | :---- | :---- | :---- | :---- | :---- |
-| OAuth 2.0 / 2.1 | Partial (scopes, JWT claims) | Yes (core focus) | Optional (DPoP, mTLS) | No (Token Exchange emulates, online) | No (opaque scope strings) |
-| AAuth | Partial (act claim, tokens) | Yes (core focus) | Yes (signed requests, core) | Server-mediated (Mission Log) | No (deferred to PS policy) |
-| zCaps | Yes (core focus) | Out of scope (invocation and revocation conventions only) | Yes (HTTP signatures, Data Integrity) | Yes (core focus) | Extension point (caveat, reserved) |
-| UCANs | Yes (core focus) | Partial (invocation and revocation sub-specs) | Yes (signed envelope) | Yes (core focus) | Extension point (pol syntax, no vocabulary) |
-| KYA-OS | Yes (VC 2.0 wrapping a zCap; typed Entity Card) | Yes (MCP binding, consent challenge, outbound headers) | Yes (per-request detached JWS in MCP \_meta) | Yes (one credential per hop, verifier-walked) | Extension point (zCap caveats; two types standardized) |
-| Cedar | No (no authorization artifact) | No | No | No | Yes (core focus) |
-| AuthZEN | Partial (SARC request shape; no authorization artifact) | Yes (core focus: PEP/PDP evaluation and search) | No (out of scope) | No | No (explicitly out of scope; engine-specific) |
+| Spec | Data model | Protocol | Possession mechanism                        | Chainable proofs | Policy language |
+| :---- | :---- | :---- |:--------------------------------------------| :---- | :---- |
+| OAuth 2.0 / 2.1 | Partial (scopes, JWT claims) | Yes (core focus) | Optional (DPoP, mTLS)                       | Server-mediated (Token Exchange, act claim; online) | No (opaque scope strings) |
+| AAuth | Partial (act claim, tokens) | Yes (core focus) | Yes (signed requests, core)                 | Server-mediated (Mission Log) | No (deferred to PS policy) |
+| zCaps | Yes (core focus) | Out of scope (invocation and revocation conventions only) | Yes (HTTP signatures, Data Integrity)       | Yes (core focus) | Extension point (caveat, reserved) |
+| UCANs | Yes (core focus) | Partial (invocation and revocation sub-specs) | Yes (signed envelope)                       | Yes (core focus) | Extension point (pol syntax, no vocabulary) |
+| KYA-OS | Yes (VC 2.0 wrapping a zCap; typed Entity Card) | Yes (MCP binding, consent challenge, outbound headers) | Yes (per-request detached JWS in MCP `_meta`) | Yes (one credential per hop, verifier-walked) | Extension point (zCap caveats; two types standardized) |
+| Cedar | No (no authorization artifact) | No | No                                          | No | Yes (core focus) |
+| AuthZEN | Partial (SARC request shape; no authorization artifact) | Yes (core focus: PEP/PDP evaluation and search) | No (out of scope)                           | No | No (explicitly out of scope; engine-specific) |
 
 ### Data Model Correspondence
 
-The family taxonomy is easiest to see at the level of concrete fields. The table below maps each spec's terminology onto the common data model from the Overview: despite the differences in encoding, the same shape recurs wherever a spec defines an authorization artifact at all. (Cedar is absent because it defines no such artifact; its equivalents are schema entities in the verifier's store. AuthZEN's column reflects the request shape a PEP submits, not an authority artifact, per its chapter. GNAP is included for field comparison, although it is not otherwise surveyed in this paper. dSD-JWT is included on the same basis; see the Appendix.)
+The family taxonomy is easiest to see at the level of concrete fields. The table below maps each spec's terminology onto the common data model from the Overview: despite the differences in encoding, the same shape recurs wherever a spec defines an authorization artifact at all. (Cedar is absent because it defines no such artifact; its equivalents are schema entities in the verifier's store. AuthZEN's column reflects the request shape a PEP submits, not an authority artifact, per its chapter. GNAP (RFC 9635) is included for field comparison only. It is not evaluated in this draft, although it is arguably more relevant to agentic delegation than some systems that are, and it is a candidate for a chapter in a later revision. dSD-JWT is included on the same basis; see the Appendix.)
 
-| Common field | OAuth 2.1 | AuthZEN | GNAP | zCaps | UCANs | KYA-OS | AAuth | dSD-JWT |
-| :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- |
-| Agent | client\_id | context.agent (COAZ-MCP); no agent concept in core | client (rich object) | controller (DID) | Delegation: aud, Invocation: iss | invoker (DID; a one-off did:key is recommended); entityType on the Entity Card | agent identifier (agent\_token subject, stable across key rotation) | cnf key (JWK) named by the previous hop; no identifier |
-| Principal | sub | subject | subject | implicit (in delegation chain) | Delegation: iss, Invocation: sub | issuer of the root credential (Responsible Party), recomputed; principal locator on the Card | person, vouched by the Person Server | holder of the base SD-JWT VC, bound by its cnf |
-| Invocation / key binding | Optional, via DPoP | no | Yes (DPoP, HTTPSig, mTLS) | Yes: HTTP signatures plus Capability-Invocation header, or Data Integrity proof | Yes: its own signed-envelope mechanism; keys resolved from DIDs | Yes: detached JWS in MCP \_meta over the canonicalized call, with audience and nonce; optional RFC 9421 sibling | Yes: HTTP Message Signatures on every request; cnf binds tokens to the current key | Yes: Key Binding JWT per hop, with aud and nonce at presentation |
-| Resource | scope or RAR (structured scope); see also htm/htu claims | resource and context | locations and datatypes | invocationTarget (URL or object) | specified in args | invocationTarget (DID, constant along the chain) | resource\_token (names resource and scope; optional account parameter) | none defined; left to the delegate payload (profile-defined) |
-| Actions | scope (also htm) | actions | actions | allowedAction | cmd | allowedAction | scope (in resource and auth tokens) | none defined; left to the delegate payload (profile-defined) |
-| Caveats / additional policy | n/a | context | ? | caveat (reserved, unused in deployment) | pol (policy statements) plus args | caveats (typed; ValidUntil and MaxAmount standardized, unknown types copied verbatim) | none in the token; mission context evaluated server-side at the PS | none defined; draft permits constraints as visible claims, no vocabulary |
-| Delegation chain | only via Token Exchange | no | no | Yes: capabilityChain proof chains | Yes: proof chains (CID-linked) | Yes: one VC per hop linked by parentCapability; referenced by a delegationRef locator, not carried | act claim plus the server-held Mission Log | Yes: hops appended as disclosures, hash-bound via sd_hash or issuer_jwt_hash |
-| Protocol (how is authorization requested?) | OAuth 2.1 itself | AuthZEN | GNAP | out of scope (uses GNAP, VCALM, and similar) | out of scope (transport left open) | signed needs\_authorization challenge with a consent URL, then resume; MCP binding | AAuth itself | OpenID4VP transaction_data item |
-| Revocation | RFC 7009 | n/a (Policy Store rollback is versioning, not revocation) | n/a | Yes: out of band, at the RS | Yes: Revocation sub-spec; also a revocation capability | Yes: Bitstring Status List per hop, cascading, fail-closed; issuer or ancestor only | specified scenarios, exercised by the issuing servers; tokens expire within the hour | Token Status List on the base credential only; no per-hop mechanism |
+| Common field | OAuth 2.1 | AuthZEN | GNAP | zCaps | UCANs | KYA-OS                                                                                                         | AAuth                                                                                                                        | dSD-JWT |
+| :---- | :---- | :---- | :---- | :---- | :---- |:---------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------| :---- |
+| Agent | `client_id` | context.agent (COAZ-MCP); no agent concept in core | client (rich object) | controller (DID) | Delegation: aud, Invocation: iss | invoker (DID; a one-off did:key is recommended); entityType on the Entity Card                                 | agent identifier (`agent_token` subject, stable across key rotation)                                                         | cnf key (JWK) named by the previous hop; no identifier |
+| Principal | sub | subject | subject | implicit (in delegation chain) | Delegation: iss, Invocation: sub | issuer of the root credential (Responsible Party), recomputed; principal locator on the Card                   | person, vouched by the Person Server                                                                                         | holder of the base SD-JWT VC, bound by its cnf |
+| Invocation / key binding | Optional, via DPoP | no | Yes (DPoP, HTTPSig, mTLS) | Yes: HTTP signatures plus Capability-Invocation header, or Data Integrity proof | Yes: its own signed-envelope mechanism; keys resolved from DIDs | Yes: detached JWS in MCP `_meta` over the canonicalized call, with audience and nonce; optional RFC 9421 sibling | Yes: HTTP Message Signatures on every request; cnf binds tokens to the current key                                           | Yes: Key Binding JWT per hop, with aud and nonce at presentation |
+| Resource | scope or RAR (structured scope); see also htm/htu claims | resource and context | locations and datatypes | invocationTarget (URL or object) | specified in args | invocationTarget (DID, constant along the chain)                                                               | `resource_token` (names resource and scope; optional account parameter)                                                        | none defined; left to the delegate payload (profile-defined) |
+| Actions | scope (also htm) | actions | actions | allowedAction (string or array) | cmd | allowedAction                                                                                                  | scope (in resource and auth tokens)                                                                                          | none defined; left to the delegate payload (profile-defined) |
+| Caveats / additional policy | none in the token; an AS could define caveat semantics through scope or RAR, but none is known to | context | ? | caveat (reserved, unused in deployment) | pol (policy statements) plus args | caveats (typed; ValidUntil and MaxAmount standardized, unknown types copied verbatim)                          | none in the token; mission context evaluated server-side at the PS                                                           | none defined; draft permits constraints as visible claims, no vocabulary |
+| Delegation chain | only via Token Exchange (act claim, held at the AS) | no | not defined by RFC 9635 | Yes: capabilityChain proof chains | Yes: proof chains (CID-linked) | Yes: one VC per hop linked by parentCapability; referenced by a delegationRef locator, not carried             | act claim plus the server-held Mission Log                                                                                   | Yes: hops appended as disclosures, each signing a hash of the prior credential state (sd_hash or issuer_jwt_hash) |
+| Protocol (how is authorization requested?) | OAuth 2.1 itself | AuthZEN | GNAP | out of scope (uses GNAP, VCALM, and similar) | out of scope (transport left open) | signed `needs_authorization` challenge with a consent URL, then resume; MCP binding                             | AAuth itself                                                                                                                 | OpenID4VP transaction_data item |
+| Revocation | RFC 7009 | n/a (Policy Store rollback is versioning, not revocation) | n/a | Yes: out of band, at the RS | Yes: Revocation sub-spec; also a revocation capability | Yes: Bitstring Status List per hop, cascading, fail-closed; issuer or ancestor only                            | specified scenarios, exercised by the issuing servers; tokens are short-lived (one-hour auth tokens in the draft's examples) | Token Status List on the base credential only; no per-hop mechanism |
 
-Two readings of this table reinforce the scorecard that follows. Empty and "n/a" cells are findings, not omissions: OAuth simply has no place to put a caveat or a chain, which predicts its rows 3 and 4 below. And the two cells where AAuth diverges from the certificate pattern (chain and caveats both live at the server, not in the token) are precisely what produces its server-mediated column throughout.
+Two readings of this table reinforce the scorecard that follows. Empty and "n/a" cells are findings, not omissions: OAuth's token has no place for a caveat, and its chain exists only as the Authorization Server's act claim, which predicts its rows 4 and 5 below. And the two cells where AAuth diverges from the certificate pattern (chain and caveats both live at the server, not in the token) are precisely what produces its server-mediated column throughout.
 
 ### The Merged Scorecard
 
-Verdicts below are taken from the per-spec chapters, which carry the detailed reasoning; the notes here are compressed to one line. zCaps, UCANs, and KYA-OS are shown separately for completeness, but as their chapter establishes, they score as a family, with KYA-OS departing on rows 1, 5, and 7. Cedar and AuthZEN likewise share a family, though they cover different layers of it and their verdicts diverge accordingly. dSD-JWT is included from the Appendix for comparison.
+Verdicts below are taken from the per-spec chapters, which carry the detailed reasoning; the notes here are compressed to one line. zCaps, UCANs, and KYA-OS are shown separately for completeness, but as their chapter establishes, they score as a family, with KYA-OS departing on rows 2, 6, and 7. Cedar and AuthZEN likewise share a family, though they cover different layers of it and their verdicts diverge accordingly. dSD-JWT is included from the Appendix for comparison.
 
-| \# | Requirement | OAuth 2.0/2.1 | AAuth | zCaps | UCANs | KYA-OS | Cedar | AuthZEN | dSD-JWT |
-| :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- |
-| 1 | Accountable (agent vs. principal/operator) | Yes with asymmetric client auth; weaker with shared client\_secret | Yes: distinct authenticated roles, act claim | Partial: signed edges, but principals are opaque DIDs | Partial: same as zCaps | Yes: typed entities; Responsible Party and Principal recomputed from the root issuer | Yes at the modeling level; not a cryptographic delegation edge | Partial: COAZ-MCP separates subject.id from context.agent; no delegation proof or operator binding | Partial: signed hops, but delegatees are bare JWKs, not identifiers |
-| 2 | Resistant to confused deputy | No: scopes attenuate but do not designate | Partial: token modes bind designation; identity-based mode is ambient | Yes, by construction | Yes, by construction | Yes, by construction; inherits the zCap pair, adds per-hop audience | No: identity-based, mitigation only | Partial: SARC carries designation per request; no delegation artifact, PEP-dependent | Partial: chain evaluated, but no resource or action in the artifact |
-| 3 | Represent authorization policies | Partial: scopes and RAR; extension-dependent | Partial: policy intentionally outside the protocol | Partial: caveat slot reserved, unused, no vocabulary | Partial: pol syntax defined, no vocabulary | Partial: two caveat types standardized; no delegation-control vocabulary | Yes, except the advisory tier; core competence | Partial: Policy Store packages artifacts; semantics stay engine-specific (core: out of scope) | No: no policy slot; terminal hop is the only control |
-| 4 | Chainable | No: single-hop; Token Exchange emulates multi-hop online | Yes, server-mediated: act claim plus Mission Log; sub-agent nesting single-level | Yes: parentCapability plus capabilityChain | Yes: hash-linked proof chains | Yes: one VC per hop, parentCapability links | No: no chain artifact; stack-dependent | No: consumer of delegation chains, not a provider | Yes: hash-bound hops rooted in the issuer signature |
-| 5 | Cross-organizational / locally verifiable | Conditional: JWT access tokens yes, opaque tokens no | Yes: cross-domain by design; trust via configured relationships | Yes: local cryptographic verification, DID principals | Yes: same, via CID resolution | Partial: local check, but the chain is resolved from a registry rather than carried | Partial: evaluation local, policy store unilateral | Partial: cross-vendor decisions interoperate; relying party trusts the remote PDP | Yes: local verification, no authorization server |
-| 6 | Attenuated | Via the AS only (scope narrowing, Token Exchange); not by the holder | Partial, differs by mode: sub-agent yes, call chaining intentionally no | Yes: monotonic, verifier-enforced | Yes: monotonic, verifier-enforced | Yes: monotonic, verifier-enforced; target fixed, actions and caveats narrow | Partial: forbid-composition shrinks authority, but no subset check between grants | No: attenuation left to the underlying policy engine | No: payload is arbitrary; narrowing deferred to a profile |
-| 7 | Self-revocable (holder or chain) | Partial: RFC 7009 plus short lifetimes; no chain concept | Partial: revocation by the servers holding authority, not the holder | Yes, at the RS revocation endpoint | Yes, via the Revocation sub-spec | Partial: issuer or any ancestor via status lists; the holder cannot | Partial: policy store change by the administrator | No: policy change is administrative, not holder revocation | No: status list on the base credential only |
-| \+ | Authentication / Proof of Possession | Optional (DPoP, mTLS); bearer remains the deployed default | Yes: every request signed, core mechanism | Yes: HTTP signatures or Data Integrity proofs | Yes: signed envelope, nonce, time bounds | Yes: detached JWS per request, audience, nonce, leaf-invoker join | No: out of scope; evidence-issuance checks only | No: out of scope; bearer OAuth is the recommended default | Yes: Key Binding JWT per hop, aud and nonce |
+**1. Attenuated.**
 
-### Reading the matrix
+* OAuth 2.0/2.1: Via the AS only (scope narrowing, Token Exchange); not by the holder.
+* AAuth: Partial. differs by mode: sub-agent yes; call chaining intentionally no, and downstream scope may exceed upstream.
+* zCaps: Yes. monotonic, verifier-enforced, including caveats added per hop.
+* UCANs: Yes. monotonic, verifier-enforced, including policy added per hop.
+* KYA-OS: Yes. monotonic, verifier-enforced; target fixed, actions and caveats narrow.
+* Cedar: Partial. forbid-composition shrinks authority, but no subset check between grants.
+* AuthZEN: No. attenuation left to the underlying policy engine.
+* dSD-JWT: No. payload is arbitrary; narrowing deferred to a profile.
+
+**2. Accountable (agent vs. principal/operator).**
+
+* OAuth 2.0/2.1: Yes with asymmetric client auth; weaker with shared `client_secret`.
+* AAuth: Yes. distinct authenticated roles, act claim.
+* zCaps: Partial. signed edges, but principals are opaque DIDs.
+* UCANs: Partial. same as zCaps.
+* KYA-OS: Yes. typed entities; Responsible Party and Principal recomputed from the root issuer.
+* Cedar: Yes at the modeling level; not a cryptographic delegation edge.
+* AuthZEN: Partial. COAZ-MCP separates subject.id from context.agent; no delegation proof or operator binding.
+* dSD-JWT: Partial. signed hops, but delegatees are bare JWKs, not identifiers.
+
+**3. Resistant to confused deputy.**
+
+* OAuth 2.0/2.1: Partial. in practice a single-audience token plus the request URL behaves as a capability, but the token itself does not designate, and multi-audience tokens break the binding.
+* AAuth: Yes in three of four modes; the identity-based mode is ambient.
+* zCaps: Yes. by construction.
+* UCANs: Yes. by construction.
+* KYA-OS: Yes. by construction; inherits the zCap pair, adds per-hop audience.
+* Cedar: No. identity-based, mitigation only.
+* AuthZEN: No. ambient authority; the subject's standing permissions decide, and the resource named in the request is a separate input.
+* dSD-JWT: Partial. chain evaluated, but no resource or action in the artifact.
+
+**4. Represent authorization policies.**
+
+* OAuth 2.0/2.1: Partial. scopes and RAR; extension-dependent.
+* AAuth: Partial. policy intentionally outside the protocol.
+* zCaps: Partial. caveat slot reserved, unused, no vocabulary.
+* UCANs: Partial. pol syntax defined, no vocabulary.
+* KYA-OS: Partial. two caveat types standardized; no delegation-control vocabulary.
+* Cedar: Yes. except the advisory tier; core competence.
+* AuthZEN: Partial. Policy Store packages artifacts; semantics stay engine-specific (core: out of scope).
+* dSD-JWT: No. no policy slot; terminal hop is the only control.
+
+**5. Chainable.**
+
+* OAuth 2.0/2.1: Partial. Token Exchange (RFC 8693) gives server-mediated multi-hop delegation, with the chain in the act claim at the AS; online, not holder-side.
+* AAuth: Yes. server-mediated: act claim plus Mission Log; sub-agent nesting single-level.
+* zCaps: Yes. parentCapability plus capabilityChain.
+* UCANs: Yes. hash-linked proof chains.
+* KYA-OS: Yes. one VC per hop, parentCapability links.
+* Cedar: No. no chain artifact; stack-dependent.
+* AuthZEN: No. consumer of delegation chains, not a provider.
+* dSD-JWT: Yes. hash-bound hops rooted in the issuer signature.
+
+**6. Cross-organizational / locally verifiable.**
+
+* OAuth 2.0/2.1: Yes. the client may belong to any organization (the classic photo-printing example); JWT tokens verify locally, opaque tokens need the AS online.
+* AAuth: Yes. cross-domain by design; trust via configured relationships.
+* zCaps: Yes. local cryptographic verification, DID principals.
+* UCANs: Yes. same, via CID resolution.
+* KYA-OS: Partial. local check, but the chain is resolved from a registry rather than carried.
+* Cedar: Partial. evaluation local, policy store unilateral.
+* AuthZEN: No. decisions interoperate across vendors; a trusted remote PDP is federation into one domain, not cross-domain verification.
+* dSD-JWT: Yes. local verification, no authorization server.
+
+**7. Self-revocable (holder or chain).**
+
+* OAuth 2.0/2.1: Partial. RFC 7009 plus short lifetimes; no chain concept.
+* AAuth: Partial. revocation by the servers holding authority, not the holder.
+* zCaps: Yes. at the RS revocation endpoint.
+* UCANs: Yes. via the Revocation sub-spec.
+* KYA-OS: Partial. issuer or any ancestor via status lists; the holder cannot.
+* Cedar: Partial. policy store change by the administrator.
+* AuthZEN: No. policy change is administrative, not holder revocation.
+* dSD-JWT: No. status list on the base credential only.
+
+**8. Authentication / Proof of Possession (nice-to-have).**
+
+* OAuth 2.0/2.1: Optional (DPoP. mTLS); bearer remains the deployed default.
+* AAuth: Yes. every request signed, core mechanism.
+* zCaps: Yes. HTTP signatures or Data Integrity proofs.
+* UCANs: Yes. signed envelope, nonce, time bounds.
+* KYA-OS: Yes. detached JWS per request, audience, nonce, leaf-invoker join.
+* Cedar: No. out of scope; evidence-issuance checks only.
+* AuthZEN: No. out of scope; bearer OAuth is the recommended default.
+* dSD-JWT: Yes. Key Binding JWT per hop, aud and nonce.
+
+### Reading the scorecard
 
 Three patterns are worth drawing out, because they organize everything else in this chapter.
 
-The capability family owns the chain rows. On the criteria that concern the mechanics of delegated authority (confused deputy, chainable, cross-organizational, attenuated, self-revocable: rows 2 and 4 through 7), zCaps and UCANs are the only column pair that is Yes across the board, and they achieve it offline and holder-side. KYA-OS, the third family member, keeps the verdicts on rows 2, 4, and 6 and drops to Partial on rows 5 and 7, in both cases because of choices in its credential carrier rather than in its capability model. Every other column pays for those rows with a server dependency, a partial verdict, or both. This is the clearest architectural line in the survey, and it is a family property, not a property of any one spec individually.
+The capability family owns the chain rows. On the criteria that concern the mechanics of delegated authority (attenuated, confused deputy, chainable, cross-organizational, self-revocable: rows 1, 3, and 5 through 7), zCaps and UCANs are the only pair of specs that is Yes across the board, and they achieve it offline and holder-side. KYA-OS, the third family member, keeps the verdicts on rows 1, 3, and 5 and drops to Partial on rows 6 and 7, in both cases because of choices in its credential carrier rather than in its capability model. Every other spec pays for those rows with a server dependency, a partial verdict, or both. This is the clearest architectural line in the survey, and it is a family property, not a property of any one spec individually.
 
-The identity side owns the semantic rows. On accountability (row 1\) and policy expression (row 3), the verdicts invert. The systems that know who everyone is (AAuth's authenticated roles, Cedar's typed principals, OAuth clients with asymmetric auth) can distinguish agent from operator natively; zCaps and UCANs deliberately keep principals opaque and delegate that distinction to a companion identity layer. KYA-OS is the one capability-family column with a Yes on row 1, and it earns it by building that companion layer into the same specification, at the cost discussed under Modeling Chained Delegation with W3C VCs. AuthZEN's COAZ-MCP binding follows the identity side's pattern, separating the human subject from the acting agent, though without a delegation proof it stops at attribution. Likewise the richest policy expression in the survey (Cedar) sits in the one spec with no delegation mechanics at all, while the specs with delegation mechanics reserve policy extension points and leave them empty.
+The identity side owns the semantic rows. On accountability (row 2\) and policy expression (row 4), the verdicts invert. The systems that know who everyone is (AAuth's authenticated roles, Cedar's typed principals, OAuth clients with asymmetric auth) can distinguish agent from operator natively; zCaps and UCANs deliberately keep principals opaque and delegate that distinction to a companion identity layer. KYA-OS is the one capability-family spec with a Yes on row 2, and it earns it by building that companion layer into the same specification, at the cost discussed under Modeling Chained Delegation with W3C VCs. AuthZEN's COAZ-MCP binding follows the identity side's pattern, separating the human subject from the acting agent, though without a delegation proof it stops at attribution. Likewise the richest policy expression in the survey (Cedar) sits in the one spec with no delegation mechanics at all, while the specs with delegation mechanics reserve policy extension points and leave them empty.
 
-No column is complete. Every spec has at least one No or Partial in the required rows 1 through 7 The capability family misses semantics (rows 1 and 3); the server-mediated family misses holder-side and offline mechanics (rows 4, 6, 7 in various ways); the policy decision family misses the delegation artifact entirely (row 4, and for Cedar row 2 as well; AuthZEN's SARC request carries designation with each decision, which earns it a Partial on row 2 that pure identity evaluation does not get). The AuthZEN column is the sparsest in the matrix, and its chapter is explicit about why: the spec addresses the decision interface layer, so its No verdicts mark a different layer rather than a failed attempt at delegation. This is the observation that motivates both the delegation-stack section and the gaps section below.
+No spec is complete. Every spec has at least one No or Partial in the required rows 1 through 7. The capability family misses semantics (rows 2 and 4); the server-mediated family misses holder-side and offline mechanics (rows 1, 5, 7 in various ways); the policy decision family misses the delegation artifact entirely (row 5) and is identity-based (row 3). AuthZEN has the sparsest set of verdicts in the scorecard, and its chapter is explicit about why. The spec addresses the decision interface layer, so most of its No verdicts mark a different layer rather than a failed attempt at delegation. The confused deputy No is the exception: a decision drawn from standing permissions is ambient authority at whatever layer it sits. This is the observation that motivates both the delegation-stack section and the gaps section below.
 
 ### Server-Mediated vs. Certificate Delegation
 
@@ -1217,32 +1373,36 @@ For agentic delegation, the trade reduces to this: the certificate model gives s
 
 Cedar is, almost row by row, the complement of the capability family: strongest exactly where zCaps and UCANs are weakest (policy expression, agent-vs-operator modeling, fine-grained revocation, composition of authority) and weakest exactly where they are strongest (no chain, no portable grant, no holder-side anything). Read as a competitor it fails the survey; read as a component it fills the survey's emptiest cell.
 
-The specific fit: both zCaps and UCANs reserve a policy extension point (caveat; pol) and ship no vocabulary for it. Cedar is a mature, analyzable policy language with no carrier. A capability chain whose caveats were expressed in a Cedar-class language would give the family what its chapters identify as their highest-value missing piece, with one property nothing else in the survey offers: because Cedar is non-Turing-complete and formally analyzable, delegation policies could be audited and subset relationships proven offline, at delegation time rather than invocation time. The reverse composition also holds: Cedar deployments that need portable, cross-organizational grants need exactly the carrier the capability family provides.
+The specific fit: zCaps reserve a caveat slot with no defined syntax, and UCAN specifies a policy syntax in detail but ships no vocabulary of delegation-control terms. Cedar is a mature, analyzable policy language with no carrier. A capability chain whose caveats were expressed in a Cedar-class language would give the family what its chapters identify as their highest-value missing piece, with one property nothing else in the survey offers: because Cedar is non-Turing-complete and formally analyzable, a delegator can prove at delegation time that a child's caveats are a subset of its own. That check is an optimization, so that no party carries a delegation that will later fail. Only the resource's verifier is trusted to decide an invocation. The reverse composition also holds: Cedar deployments that need portable, cross-organizational grants need exactly the carrier the capability family provides.
 
-AuthZEN extends the same complement to the protocol layer, and makes the composition concrete. Cedar has no standard request/decision interface; AuthZEN supplies exactly that. In a composed stack, a capability verifier can act as a PEP: it checks the chain and proof of possession locally, then consults a PDP over AuthZEN for the caveat evaluation the capability family leaves unspecified. COAZ points the same direction from the other side, mapping live protocol operations (including MCP tool calls, via COAZ-MCP) into decision requests that reflect the actual invocation parameters. None of this requires the capability chain to change shape; it fills the empty caveat slot with an evaluation pipeline that already exists.
+AuthZEN extends the same complement to the protocol layer, and makes the composition concrete. Cedar has no standard request/decision interface; AuthZEN supplies exactly that. In a composed stack, a capability verifier can act as a PEP: it checks the chain and proof of possession locally, then consults its own PDP over AuthZEN for the caveat evaluation the capability family leaves unspecified. The PDP in this arrangement belongs to the resource, so no ambient authority is introduced; it is an implementation detail of the verifier. AuthZEN also fits at the other end of the chain, as the interface a resource owner's policy engine exposes for deciding which capabilities to hand out to which authenticated principal. COAZ points the same direction from the other side, mapping live protocol operations (including MCP tool calls, via COAZ-MCP) into decision requests that reflect the actual invocation parameters. None of this requires the capability chain to change shape; it fills the empty caveat slot with an evaluation pipeline that already exists.
 
 This suggests the shape of a composed delegation stack, assembled from surveyed parts:
 
 1. Entry point (identity layer): an identity system (OIDC, Verifiable Credentials) makes the human or organizational judgement call and binds operator to agent; the zCap specification itself recommends this split, and KYA-OS's Entity Card and Responsible Party are one worked example of it.  
 2. Authority flow (carrier layer): a certificate capability chain carries the delegated, attenuated authority across hops and organizations, offline and locally verifiable.  
-3. Restrictions (policy layer): caveats within the chain expressed in a standardized, analyzable policy language, evaluated at each hop and provable between hops; where evaluation is handed to a PDP, AuthZEN is the standard interface for asking.  
+3. Restrictions (policy layer): caveats within the chain expressed in a standardized, analyzable policy language. The resource's verifier evaluates them at invocation. A delegator may also check them at each hop, as an optimization to avoid handing out a delegation that will fail. Where a verifier hands evaluation to its own PDP, AuthZEN is the standard interface for asking.  
 4. Presentation (possession layer): signed invocation of the transport in use (HTTP Message Signatures, Data Integrity proofs, DPoP-style binding), with keys held outside the agent per the Introduction's requirements.
 
 No surveyed spec provides more than two adjacent layers of this stack, and no pair of them currently interoperates by standard. That observation leads directly to the gaps.
 
 ### Gaps
 
-Reading down the merged matrix, the recurring Partial and No cells cluster into five gaps that no surveyed specification fills. These are candidates for working group attention, ordered roughly by how directly they block agentic delegation.
+Reading down the merged scorecard, the recurring Partial and No verdicts cluster into five gaps that no surveyed specification fills. These are candidates for working group attention, ordered roughly by how directly they block agentic delegation.
 
-1. A standard policy and caveat vocabulary for delegation control. Both certificate capability specs have the extension point and neither ships vocabulary; AAuth places policy outside the protocol; OAuth scopes are opaque strings; AuthZEN standardizes the decision request while leaving policy semantics to the engine. The concrete missing terms are the checklist's own examples: undelegatable, re-delegation constraints, delegation depth. Cedar demonstrates that such a vocabulary can be expressive and formally analyzable at once. This is the gap where existing pieces come closest to composing, and arguably the highest-value item.  
+1. A standard policy and caveat vocabulary for delegation control. Both certificate capability specs have the extension point and neither ships vocabulary; AAuth places policy outside the protocol; OAuth scopes are opaque strings; AuthZEN standardizes the decision request while leaving policy semantics to the engine. The concrete missing terms are the checklist's own examples: usage restrictions such as time windows, re-delegation constraints, and depth limits. Cedar demonstrates that such a vocabulary can be expressive and formally analyzable at once. This is the gap where existing pieces come closest to composing, and arguably the highest-value item. Two alternatives to a global standard exist. A resource can treat its policy language as part of its API, so that a delegator learns the caveat vocabulary from the resource it is delegating access to. Some practitioners also report that natural-language caveats interpreted by an LLM work surprisingly well, trading determinism for flexibility.  
 2. An advisory tier. No surveyed system can express a request whose violation is not refused ("please do not re-delegate outside the org"): every evaluation model in the survey is binary enforce/reject. Advisory semantics matter for agentic delegation because agents cross governance boundaries where hard enforcement is impossible but recorded intent still has value (for audit, for liability, for downstream policy).  
-3. Agent-vs-operator semantics and identity binding. The capability family cannot say which principal is the accountable legal entity; the identity-centric systems can, but only inside their own trust domain. What is missing is a standardized companion mechanism (the VC-based binding the capability chapter gestures at) so that accountability to an operator survives cross-organizational, multi-hop delegation without collapsing back into identity-based authorization. KYA-OS is the first surveyed specification to supply one, by naming and recomputing a Responsible Party at the root of a zCap chain; whether its particular carrier (the capability wrapped in a Verifiable Credential, with the chain resolved from a registry) is the right shape for a cross-organizational standard is the open question the VC modeling chapter raises. AuthZEN's open Issue \#416, which requests a delegation\_chain structure in the Subject for AI-agent scenarios, is this same gap filed independently by an adjacent working group.  
+3. Agent-vs-operator semantics and identity binding. The capability family cannot say which principal is the accountable legal entity; the identity-centric systems can, but only inside their own trust domain. What is missing is a standardized companion mechanism (the VC-based binding the capability chapter gestures at) so that accountability to an operator survives cross-organizational, multi-hop delegation without collapsing back into identity-based authorization. KYA-OS is the first surveyed specification to supply one, by naming and recomputing a Responsible Party at the root of a zCap chain; whether its particular carrier (the capability wrapped in a Verifiable Credential, with the chain resolved from a registry) is the right shape for a cross-organizational standard is the open question the VC modeling chapter raises. AuthZEN's open Issue \#416, which requests a `delegation_chain` structure in the Subject for AI-agent scenarios, is this same gap filed independently by an adjacent working group. Hop-by-hop responsibility tracking is an alternative that needs no standard binding: each delegator vouches for the party it delegated to, and an auditor walks the chain one edge at a time. This works across domains that do not federate.  
 4. Offline and decentralized revocation. Every surveyed revocation mechanism is state at an enforcement point that must be reached: an RS endpoint, a server's grant, a policy store. For the local-machine and LAN agentic use cases the checklist highlights, revocation semantics under partition are unspecified everywhere. UCAN's open dissemination model (gossip, DHT) is the closest starting point, but its guarantees are undefined. The dSD-JWT draft states the problem from the delegator's side: an individual holder has no channel to distribute revocation to verifiers, so it falls back to short expiry.  
-5. Cross-organizational policy exchange. Even where evaluation is local, policy semantics are unilateral: Cedar's store belongs to one verifier, an AS's scope definitions to one provider, a PS's mission policy to one server. There is no standard by which one organization hands another a policy fragment with agreed meaning. AuthZEN's Policy Store draft is a partial answer: it standardizes the packaging and exchange of policy artifacts while explicitly leaving their semantics engine-specific, sharpening this gap without closing it. This is the cross-organizational criterion's unmet half, and it compounds gap 1: a shared caveat vocabulary is also the natural interchange format.
+5. Cross-organizational policy exchange. Even where evaluation is local, policy semantics are unilateral: Cedar's store belongs to one verifier, an AS's scope definitions to one provider, a PS's mission policy to one server. There is no standard by which one organization hands another a policy fragment with agreed meaning. AuthZEN's Policy Store draft is a partial answer: it standardizes the packaging and exchange of policy artifacts while explicitly leaving their semantics engine-specific, sharpening this gap without closing it. This is the cross-organizational criterion's unmet half, and it compounds gap 1: a shared caveat vocabulary is also the natural interchange format. Cross-organizational policy exchange is a hard problem in general. The pragmatic alternative, as under gap 1, is to make the policy language part of each application's API rather than a shared standard.
+
+One further case was raised in review and is recorded here rather than scored. A delegation may be made to a target not yet known, for example by publishing it on a message bus for whichever agent picks up the task. UCANs and zCaps could carry the metadata such a pattern needs, but responsibility tracking becomes delicate when the delegator does not know who will act. Whether this deserves a criterion of its own is left for a later revision.
 
 ## Conclusion
 
-The survey's answer to "which specification should agentic delegation use" is that the question cannot have a general answer. The certificate capability family supplies the only viable backbone for the authority flow itself as first-class data element and throughline: it alone meets the chain criteria, offline and holder-side, and it alone is immune to the confused deputy by construction. But it is a backbone, not a solution; its own chapters identify the missing semantics, and those semantics are exactly what the identity-centric and policy systems in this survey already know how to express. The near-term work is therefore not a seventh competing spec but composition: a standardized policy vocabulary that can ride in a capability chain, a standardized identity binding at the chain's root (whether this be centralized in a “Mission Log” or not), a standard decision interface (which AuthZEN already supplies) where caveat evaluation is handed to a policy engine, and revocation mechanisms designed for the partitioned, multi-organizational environments agents actually operate in. The gaps list above is, in effect, the specification outline for that work.
+The survey's answer to "which specification should agentic delegation use" is that the question cannot have a general answer. The certificate capability family supplies the only viable backbone for the authority flow itself as a first-class data element and throughline: it alone meets the chain criteria, offline and holder-side, and it alone is immune to the confused deputy by construction. But it is a backbone, not a solution. Its own chapters identify the missing semantics, and those semantics are exactly what the identity-centric and policy systems in this survey already know how to express. The near-term work is therefore not a seventh competing spec but composition.
+
+Less of that composition needs global agreement than the gaps list might suggest. Identity binding at the chain's root can be handled hop by hop, with each delegator accountable for the party it delegated to. The decision interface and the revocation mechanism are each the concern of the resource's own verifier, which deals with its own certificates and is the only party that needs to learn of a revocation. What does benefit from shared agreement is the policy and caveat vocabulary that rides in the chain, since a delegator must be able to write a caveat that a verifier it has never met will interpret as intended. Even there, treating the policy language as part of each resource's API is a workable alternative. Revocation under partition remains an open design problem for every verifier regardless. The gaps list above is, in effect, the outline for that work.
 
 ## Appendix: Other Systems Considered
 
@@ -1252,26 +1412,51 @@ This appendix covers specifications that were examined during the survey but tha
 
 #### Overview
 
-[Delegated SD-JWT](https://datatracker.ietf.org/doc/draft-gco-oauth-delegate-sd-jwt/) ("dSD-JWT", an individual IETF draft at revision 00) is an extension to [Selective Disclosure JWT (SD-JWT, RFC 9901)](https://datatracker.ietf.org/doc/rfc9901/) that lets the holder of an issued credential hand a bounded, verifiable authorization to another party without involving the issuer. Rather than defining a new credential type, it appends a delegation hop to an existing SD-JWT as an additional disclosure. Each hop is a JSON payload chosen by the delegator, wrapped in a Key Binding JWT signed by the key the previous hop named in its `cnf` claim, and hash-bound to the prior state of the credential (via `sd_hash` or `issuer_jwt_hash`). A hop may name a further `cnf` key, in which case the chain can continue, or omit it, in which case the chain terminates at that delegatee.
+[Delegated SD-JWT](https://datatracker.ietf.org/doc/draft-gco-oauth-delegate-sd-jwt/) ("dSD-JWT", an individual IETF draft at revision 00) is an extension to [Selective Disclosure JWT (SD-JWT, RFC 9901)](https://datatracker.ietf.org/doc/rfc9901/) that lets the holder of an issued credential hand a bounded, verifiable authorization to another party without involving the issuer. Rather than defining a new credential type, it appends a delegation hop to an existing SD-JWT as an additional disclosure. Each hop is a JSON payload chosen by the delegator, wrapped in a Key Binding JWT signed by the key the previous hop named in its `cnf` claim, and hash-bound to the prior state of the credential. That is, the Key Binding JWT carries a hash of the credential as it stood before the hop (`sd_hash` or `issuer_jwt_hash`), so a hop cannot be detached, reordered, or replayed against a different chain. A hop may name a further `cnf` key, in which case the chain can continue, or omit it, in which case the chain terminates at that delegatee.
 
 The draft is deliberately claim-agnostic. It defines the chaining and key-binding mechanics and says nothing about what the delegated claims mean. Vocabulary for agents, resources, actions, or limits is left to a higher-level profile. The one implementation examined for this appendix (the [equs-credentials-sdk](https://github.com/equs-ai/equs-credentials-sdk), where the feature is marked experimental and disabled by default) names the [Agent Payments Protocol (AP2)](https://ap2-protocol.org/) as the first such consumer, but that profile is not part of the draft and its dSD-JWT binding was not available for review.
 
 This makes dSD-JWT a chainable proof method plus a possession mechanism, in the terminology of the Introduction, rather than a full authorization data model. It is closest in spirit to the certificate capability family, but its root of authority is a credential issuer rather than a resource owner, and it lacks the two properties that define that family in this report: an enforced attenuation rule and a resource and action model. For those reasons it is placed here rather than in a chapter of its own.
 
+The draft covers issuance, delegation, and presentation to a verifier, the last by Key Binding JWT with the audience and nonce binding inherited from RFC 9901 and OpenID4VP. It defines no invocation protocol against a resource. How a verifier turns an accepted presentation into an action is outside the draft.
+
 Reference points: the draft text (sections 4 through 8) and the SDK's design note, source, and tests. The SDK delegates chain verification to a separate crate that was not reviewed directly, so verdicts below rest on the current internet-draft (-00), the SDK call sites, and the SDK's test suite.
 
 #### Scorecard
 
-| \# | Requirement | dSD-JWT | Notes |
-| ----- | ----- | ----- | ----- |
-| 1 | Accountable (agent vs. principal/operator) | Partial | Every hop is signed by the key the previous hop named, so each edge is attributable. But delegatees are identified by raw JWKs in `cnf`, not by DIDs or any stable identifier, and there is no agent or operator field. Weaker than zCaps and UCANs, whose principals are at least DIDs. |
-| 2 | Resistant to confused deputy | Partial | Authority travels in the signed artifact and the verifier evaluates the chain rather than the presenter's standing. However, the artifact carries no designated resource or action, so whether designation and authorization are bound together depends entirely on the profile that defines the payload vocabulary. |
-| 3 | Represent authorization policies | No | No caveat or policy slot. The only delegation control is structural: a hop that omits `cnf` ends the chain. Draft section 8.2 says a delegator "MAY" add constraints as visible claims, with no defined vocabulary (unclear if profiles define it, or if it is per-verifier/usecase). No advisory tier. |
-| 4 | Chainable | Yes | Multi-hop, holder-side, each hop hash-bound to the prior state and rooted in the original issuer signature. Covers operator to agent and agent to sub-agent. |
-| 5 | Cross-organizational / locally verifiable | Yes | Verification is local and needs no authorization server. The root issuer key is obtained through DID resolution or issuer metadata; hop keys are embedded JWKs. The format does not answer whether a given hop key is trusted for a given resource. |
-| 6 | Attenuated | No | Neither the draft nor the implementation enforces narrowing. The delegate payload is arbitrary JSON, and the only validation rejects reserved keys. Attenuation is explicitly deferred to a higher-level profile. |
-| 7 | Self-revocable | No | Only Token Status List on the base credential, which revokes the whole tree at once. Draft section 8.3 acknowledges that an individual holder "can not easily distribute revocation information to Verifiers" and suggests a short `exp` as mitigation. No per-hop revocation and no revoker role. |
-| \+ | Authentication / Proof of Possession | Yes | Key Binding JWT at every hop, with `aud` and `nonce` binding at presentation. Not a bearer format. |
+Each entry gives the requirement, the verdict, and the reasoning.
+
+**1. Attenuated.** Verdict: No.
+
+Neither the draft nor the implementation enforces narrowing. The delegate payload is arbitrary JSON, and the only validation rejects reserved keys. Attenuation is explicitly deferred to a higher-level profile.
+
+**2. Accountable (agent vs. principal/operator).** Verdict: Partial.
+
+Every hop is signed by the key the previous hop named, so each edge is attributable. But delegatees are identified by raw JWKs in `cnf`, not by DIDs or any stable identifier, and there is no agent or operator field. Weaker than zCaps and UCANs, whose principals are at least DIDs.
+
+**3. Resistant to confused deputy.** Verdict: Partial.
+
+Authority travels in the signed artifact and the verifier evaluates the chain rather than the presenter's standing. However, the artifact carries no designated resource or action, so whether designation and authorization are bound together depends entirely on the profile that defines the payload vocabulary.
+
+**4. Represent authorization policies.** Verdict: No.
+
+No caveat or policy slot. The only delegation control is structural: a hop that omits `cnf` ends the chain. Draft section 8.2 says a delegator "MAY" add constraints as visible claims, with no defined vocabulary (unclear if profiles define it, or if it is per-verifier/usecase). No advisory tier.
+
+**5. Chainable.** Verdict: Yes.
+
+Multi-hop, holder-side, each hop hash-bound to the prior state and rooted in the original issuer signature. Covers operator to agent and agent to sub-agent.
+
+**6. Cross-organizational / locally verifiable.** Verdict: Yes.
+
+Verification is local and needs no authorization server. The root issuer key is obtained through DID resolution or issuer metadata; hop keys are embedded JWKs. The format does not answer whether a given hop key is trusted for a given resource.
+
+**7. Self-revocable.** Verdict: No.
+
+Only Token Status List on the base credential, which revokes the whole tree at once. Draft section 8.3 acknowledges that an individual holder "can not easily distribute revocation information to Verifiers" and suggests a short `exp` as mitigation. No per-hop revocation and no revoker role.
+
+**8. Authentication / Proof of Possession (nice-to-have).** Verdict: Yes.
+
+Key Binding JWT at every hop, with `aud` and `nonce` binding at presentation. Not a bearer format.
 
 #### Placement relative to the survey
 
@@ -1304,16 +1489,39 @@ It is particularly noteworthy as an alternative to conventional ACLs for use in 
 
 #### Scorecard
 
-| \# | Requirement | dSD-JWT | Notes |
-| ----- | ----- | ----- | ----- |
-| 1 | Accountable (agent vs. principal/operator) | Partial | Agent<>principal relationships CAN be encoded in SpiceDB, but this is more of a userspace/configuration option than an explicit, first-order distinction |
-| 2 | Resistant to confused deputy | No | Arguably, a richer vocabulary for authentication-based decisions and a centralized ACL just incentivizes impersonation or credential-sharing further, and makes them harder to detect from the (cross-service) logs and behaviors observed. |
-| 3 | Represent authorization policies | Yes | Caveats can be imposed on permissions, or on the underlying relationships themselves, in an AuthZed-specific DSL. No advisory tier for these. |
-| 4 | Chainable | Partial | No direct or explicit chaining of permissions, although permissions can be delegated to groups whose members change (and new members can add new members in turn) so something like chainable permissions can be effected implicitly. |
-| 5 | Cross-organizational / locally verifiable | No | Delegation and invocation both require live access to the authoritative SpiceDB server. |
-| 6 | Attenuated | Partial | Caveats expressable in the AuthZed DSL can be added each time permissions get assigned/"delegated", but these can also be removed (i.e. the total permissions escalated) by later hops as well. |
-| 7 | Self-revocable | No | User can be permissioned to remove themselves from groups, but this has no effect on, e.g., other members they added to those groups. |
-| \+ | Authentication / Proof of Possession | Partial | How actors are authenticated to their corresponding entries in the SpiceDB directory is out-of-scope of the specification, can be possesion-based or not. |
+Each entry gives the requirement, the verdict, and the reasoning.
+
+**1. Attenuated.** Verdict: Partial.
+
+Caveats expressable in the AuthZed DSL can be added each time permissions get assigned/"delegated", but these can also be removed (i.e. the total permissions escalated) by later hops as well.
+
+**2. Accountable (agent vs. principal/operator).** Verdict: Partial.
+
+Agent<>principal relationships CAN be encoded in SpiceDB, but this is more of a userspace/configuration option than an explicit, first-order distinction
+
+**3. Resistant to confused deputy.** Verdict: No.
+
+Arguably, a richer vocabulary for authentication-based decisions and a centralized ACL just incentivizes impersonation or credential-sharing further, and makes them harder to detect from the (cross-service) logs and behaviors observed.
+
+**4. Represent authorization policies.** Verdict: Yes.
+
+Caveats can be imposed on permissions, or on the underlying relationships themselves, in an AuthZed-specific DSL. No advisory tier for these.
+
+**5. Chainable.** Verdict: Partial.
+
+No direct or explicit chaining of permissions, although permissions can be delegated to groups whose members change (and new members can add new members in turn) so something like chainable permissions can be effected implicitly.
+
+**6. Cross-organizational / locally verifiable.** Verdict: No.
+
+Delegation and invocation both require live access to the authoritative SpiceDB server.
+
+**7. Self-revocable.** Verdict: No.
+
+User can be permissioned to remove themselves from groups, but this has no effect on, e.g., other members they added to those groups.
+
+**8. Authentication / Proof of Possession (nice-to-have).** Verdict: Partial.
+
+How actors are authenticated to their corresponding entries in the SpiceDB directory is out-of-scope of the specification, can be possesion-based or not.
 
 #### Placement relative to the survey
 
@@ -1325,4 +1533,13 @@ As one of the guiding design goals of this report has been minimizing "ambient a
 While the _identities_ against which authorization decisions are made (and against which actors are authenticated) are strictly pegged to the SpiceDB layer, the delegations and permissions themselves (encoded in the AuthZed layer) _do_ allow rich and expressive caveats.
 The fairly expressive [domain-specific language for caveats](https://authzed.com/docs/spicedb/concepts/caveats#defining-caveats) provided in AuthZed for attenuating permissions (_or for attentuating [the relationships themselves](https://authzed.com/docs/spicedb/concepts/caveats#allowing-caveats-on-relations)!_) puts the attenuation logic closer to the delegation than many of the other protocols we've evaluated here, and allows these attenuations to travel across the systems unified by the overarching ReBAC abstraction.
 
-The scorecard was not added as a column to the major comparison chart earlier because there are already so many other columns representing extensions to the ACL+OAuth model, but this section was added for the sake of completeness.
+AuthZed was not added to the merged scorecard in the Synthesis chapter because that scorecard already covers so many extensions to the ACL+OAuth model, but this section was added for the sake of completeness.
+
+### Relationship to Stiegler's Seven Aspects of Sharing
+
+The evaluation checklist in the Introduction largely tracks Stiegler's seven aspects of sharing (see the [Delegated Authority Problem-space report](https://identity.foundation/delegated-authority-report)), with the following adaptations for spec evaluation:
+
+* Composability is not listed as a separate criterion, since any capability system satisfies it trivially, so it does not discriminate among the candidates under evaluation.
+* Functional resistance to confused deputy attacks (item 3) replaces the more formal composability, as it proved the more useful rubric.
+* An additional requirement that authorization *policies* be representable (at least by reference) in the specification (item 4) was added, as a practical necessity in enterprise and large-scale deployments.
+* Stiegler's "dynamic" aspect (delegation without undue delay) is not scored as a criterion. It is covered by the per-stage reachability analysis under Offline Use Considerations in the Introduction.
