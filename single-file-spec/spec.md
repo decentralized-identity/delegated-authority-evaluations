@@ -34,6 +34,72 @@ Participate:
 
 ------------------------------------
 
+## Table of Contents
+
+- [Introduction](#introduction)
+  - [Specification Evaluation Checklist](#specification-evaluation-checklist)
+  - [General Data Model (In Common)](#general-data-model-in-common)
+  - [A Note on Terminology](#a-note-on-terminology)
+  - [Delegation Chain Privacy Considerations](#delegation-chain-privacy-considerations)
+  - [Offline Use Considerations](#offline-use-considerations)
+- [OAuth Family Evaluation](#oauth-family-evaluation)
+  - [Overview](#overview)
+  - [What's Actually Deployed: OAuth 2.0 plus RFC 9700](#whats-actually-deployed-oauth-20-plus-rfc-9700)
+  - [OAuth 2.1: Where the Consolidation Is Heading](#oauth-21-where-the-consolidation-is-heading)
+  - [Comparative Scorecard](#part-4-comparative-scorecard)
+  - [Closing Note](#closing-note)
+  - [Implementations and Status](#implementations-and-status)
+- [AAuth Evaluation](#aauth-evaluation)
+  - [Overview](#overview-1)
+  - [Origins and Architecture](#origins-and-architecture)
+  - [Scorecard](#scorecard)
+  - [Detailed Evaluation](#detailed-evaluation)
+  - [Summary](#summary)
+  - [Implementations and Status](#implementations-and-status-1)
+- [Certificate Capabilities Evaluation (zCaps, UCANs, and KYA-OS)](#certificate-capabilities-evaluation-zcaps-ucans-and-kya-os)
+  - [Overview](#overview-2)
+  - [Scorecard](#scorecard-1)
+  - [Detailed Evaluation](#detailed-evaluation-1)
+  - [Nice-to-haves](#nice-to-haves)
+  - [Where the Specs Diverge](#where-the-specs-diverge)
+  - [Summary](#summary-1)
+  - [Implementations and Status](#implementations-and-status-2)
+- [Modeling Chained Delegation with W3C VCs](#modeling-chained-delegation-with-w3c-vcs)
+  - [Why this chapter exists](#why-this-chapter-exists)
+  - [The case against](#the-case-against)
+  - [If you do it anyway](#if-you-do-it-anyway)
+  - [Why current VC libraries cannot verify a delegation chain](#why-current-vc-libraries-cannot-verify-a-delegation-chain)
+  - [How the two surveyed attempts fare](#how-the-two-surveyed-attempts-fare)
+- [Cedar/Janssen Evaluation](#cedarjanssen-evaluation)
+  - [Overview](#overview-3)
+  - [Scorecard](#scorecard-2)
+  - [Cedar Evaluation](#cedar-evaluation)
+  - [Nice-to-haves](#nice-to-haves-1)
+  - [Summary](#summary-2)
+  - [Implementations and Status](#implementations-and-status-3)
+  - [References](#references)
+- [AuthZEN Evaluation](#authzen-evaluation)
+  - [Overview](#overview-4)
+  - [Scorecard](#scorecard-3)
+  - [Detailed Evaluation](#detailed-evaluation-2)
+  - [Additional Considerations](#additional-considerations)
+  - [Summary](#summary-3)
+  - [Implementations and Status](#implementations-and-status-4)
+  - [References](#references-1)
+- [Synthesis: Comparing the Surveyed Specifications](#synthesis-comparing-the-surveyed-specifications)
+  - [Three Families](#three-families)
+  - [Data Model Correspondence](#data-model-correspondence)
+  - [The Merged Scorecard](#the-merged-scorecard)
+  - [Reading the scorecard](#reading-the-scorecard)
+  - [Server-Mediated vs. Certificate Delegation](#server-mediated-vs-certificate-delegation)
+  - [The Policy Decision Family as Complement](#the-policy-decision-family-as-complement)
+  - [Gaps](#gaps)
+- [Conclusion](#conclusion)
+- [Appendix: Other Systems Considered](#appendix-other-systems-considered)
+  - [Delegated SD-JWT (dSD-JWT)](#delegated-sd-jwt-dsd-jwt)
+  - [AuthZed/SpiceDB](#authzedspicedb)
+  - [Relationship to Stiegler's Seven Aspects of Sharing](#relationship-to-stieglers-seven-aspects-of-sharing)
+
 ## Introduction
 
 This report evaluates authorization and access control specifications specifically through the lens of agentic permissions and delegation.
@@ -149,7 +215,7 @@ The table below answers that question for five stages. Verdicts are drawn from t
 * Verify: the enforcement point checks that the presented authority is valid.  
 * Check revocation: the enforcement point learns whether the authority has been withdrawn.
 
-| Stage | OAuth 2.0/2.1 | AAuth | zCaps / UCANs | KYA-OS | Cedar | AuthZEN | dSD-JWT |
+| Stage | [OAuth 2.0/2.1](#oauth-family-evaluation) | [AAuth](#aauth-evaluation) | [zCaps / UCANs](#certificate-capabilities-evaluation-zcaps-ucans-and-kya-os) | [KYA-OS](#certificate-capabilities-evaluation-zcaps-ucans-and-kya-os) | [Cedar](#cedarjanssen-evaluation) | [AuthZEN](#authzen-evaluation) | [dSD-JWT](#delegated-sd-jwt-dsd-jwt) |
 | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- |
 | Obtain authority | Authorization Server token endpoint | Agent Provider for the agent token. Identity-based mode needs no further issuance; resource-managed and PS-asserted modes need the resource or the Person Server | None. The resource owner signs a root capability locally | The resource owner or its authorization service signs the root credential, typically after a consent challenge returned by the server | Policy store write by an administrator | Not defined; delegation is outside the specification | Issuer signs the base credential and delivers it to the holder |
 | Extend the chain | Authorization Server token exchange endpoint (RFC 8693). No holder-side extension | Person Server and Mission Log; server-mediated | None. The delegatee signs a child capability with its own key. Only the next delegatee's DID or key is needed in hand | None. The delegatee signs the next hop's credential locally, as for zCaps | Policy store write, then distribution to edge PDPs | Not defined | None. The holder signs the next hop locally |
@@ -1312,19 +1378,19 @@ The families also differ in which of the specification types from the Introducti
 
 | Spec | Data model | Protocol | Possession mechanism                        | Chainable proofs | Policy language |
 | :---- | :---- | :---- |:--------------------------------------------| :---- | :---- |
-| OAuth 2.0 / 2.1 | Partial (scopes, JWT claims) | Yes (core focus) | Optional (DPoP, mTLS)                       | Server-mediated (Token Exchange, act claim; online) | No (opaque scope strings) |
-| AAuth | Partial (act claim, tokens) | Yes (core focus) | Yes (signed requests, core)                 | Server-mediated (Mission Log) | No (deferred to PS policy) |
-| zCaps | Yes (core focus) | Out of scope (invocation and revocation conventions only) | Yes (HTTP signatures, Data Integrity)       | Yes (core focus) | Extension point (caveat, reserved) |
-| UCANs | Yes (core focus) | Partial (invocation and revocation sub-specs) | Yes (signed envelope)                       | Yes (core focus) | Extension point (pol syntax, no vocabulary) |
-| KYA-OS | Yes (VC 2.0 wrapping a zCap; typed Entity Card) | Yes (MCP binding, consent challenge, outbound headers) | Yes (per-request detached JWS in MCP `_meta`) | Yes (one credential per hop, verifier-walked) | Extension point (zCap caveats; two types standardized) |
-| Cedar | No (no authorization artifact) | No | No                                          | No | Yes (core focus) |
-| AuthZEN | Partial (SARC request shape; no authorization artifact) | Yes (core focus: PEP/PDP evaluation and search) | No (out of scope)                           | No | No (explicitly out of scope; engine-specific) |
+| [OAuth 2.0 / 2.1](#oauth-family-evaluation) | Partial (scopes, JWT claims) | Yes (core focus) | Optional (DPoP, mTLS)                       | Server-mediated (Token Exchange, act claim; online) | No (opaque scope strings) |
+| [AAuth](#aauth-evaluation) | Partial (act claim, tokens) | Yes (core focus) | Yes (signed requests, core)                 | Server-mediated (Mission Log) | No (deferred to PS policy) |
+| [zCaps](#certificate-capabilities-evaluation-zcaps-ucans-and-kya-os) | Yes (core focus) | Out of scope (invocation and revocation conventions only) | Yes (HTTP signatures, Data Integrity)       | Yes (core focus) | Extension point (caveat, reserved) |
+| [UCANs](#certificate-capabilities-evaluation-zcaps-ucans-and-kya-os) | Yes (core focus) | Partial (invocation and revocation sub-specs) | Yes (signed envelope)                       | Yes (core focus) | Extension point (pol syntax, no vocabulary) |
+| [KYA-OS](#certificate-capabilities-evaluation-zcaps-ucans-and-kya-os) | Yes (VC 2.0 wrapping a zCap; typed Entity Card) | Yes (MCP binding, consent challenge, outbound headers) | Yes (per-request detached JWS in MCP `_meta`) | Yes (one credential per hop, verifier-walked) | Extension point (zCap caveats; two types standardized) |
+| [Cedar](#cedarjanssen-evaluation) | No (no authorization artifact) | No | No                                          | No | Yes (core focus) |
+| [AuthZEN](#authzen-evaluation) | Partial (SARC request shape; no authorization artifact) | Yes (core focus: PEP/PDP evaluation and search) | No (out of scope)                           | No | No (explicitly out of scope; engine-specific) |
 
 ### Data Model Correspondence
 
 The family taxonomy is easiest to see at the level of concrete fields. The table below maps each spec's terminology onto the common data model from the Overview: despite the differences in encoding, the same shape recurs wherever a spec defines an authorization artifact at all. (Cedar is absent because it defines no such artifact; its equivalents are schema entities in the verifier's store. AuthZEN's column reflects the request shape a PEP submits, not an authority artifact, per its chapter. GNAP (RFC 9635) is included for field comparison only. It is not evaluated in this draft, although it is arguably more relevant to agentic delegation than some systems that are, and it is a candidate for a chapter in a later revision. dSD-JWT is included on the same basis; see the Appendix.)
 
-| Common field | OAuth 2.1 | AuthZEN | GNAP | zCaps | UCANs | KYA-OS                                                                                                         | AAuth                                                                                                                        | dSD-JWT |
+| Common field | [OAuth 2.1](#oauth-family-evaluation) | [AuthZEN](#authzen-evaluation) | GNAP | [zCaps](#certificate-capabilities-evaluation-zcaps-ucans-and-kya-os) | [UCANs](#certificate-capabilities-evaluation-zcaps-ucans-and-kya-os) | [KYA-OS](#certificate-capabilities-evaluation-zcaps-ucans-and-kya-os)                                                                                                         | [AAuth](#aauth-evaluation)                                                                                                                        | [dSD-JWT](#delegated-sd-jwt-dsd-jwt) |
 | :---- | :---- | :---- | :---- | :---- | :---- |:---------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------| :---- |
 | Agent | `client_id` | context.agent (COAZ-MCP); no agent concept in core | client (rich object) | controller (DID) | Delegation: aud, Invocation: iss | invoker (DID; a one-off did:key is recommended); entityType on the Entity Card                                 | agent identifier (`agent_token` subject, stable across key rotation)                                                         | cnf key (JWK) named by the previous hop; no identifier |
 | Principal | sub | subject | subject | implicit (in delegation chain) | Delegation: iss, Invocation: sub | issuer of the root credential (Responsible Party), recomputed; principal locator on the Card                   | person, vouched by the Person Server                                                                                         | holder of the base SD-JWT VC, bound by its cnf |
