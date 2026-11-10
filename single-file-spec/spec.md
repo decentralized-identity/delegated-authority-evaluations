@@ -536,7 +536,7 @@ Accordingly, AAuth is best understood as a server-mediated delegation and execut
 
 #### Current implementations
 
-The [aauth.dev](https://aauth.dev/) project site and the specification repository list a TypeScript SDK ([aauth-dev/packages-js](https://github.com/aauth-dev/packages-js)), Go and Python libraries, .NET samples, a Keycloak extension that adds AAuth to an existing identity provider, a reference Person Server, an Envoy ext-authz resource adapter, and several demos and explorer tools. A third-party [end-to-end demo](https://github.com/christian-posta/aauth-full-demo) pairs AAuth with A2A and Keycloak. All of these are maintained by or around the draft's author, and no independent production deployment was found for this report.
+The [aauth.dev](https://aauth.dev/) project site and the specification repository list a TypeScript SDK ([aauth-dev/packages-js](https://github.com/aauth-dev/packages-js)), Go and Python libraries, .NET samples, a Keycloak extension that adds AAuth to an existing identity provider, a reference Person Server, an Envoy ext-authz resource adapter, and several demos and explorer tools. A third-party [end-to-end demo](https://github.com/christian-posta/aauth-full-demo) pairs AAuth with A2A and Keycloak. All of these are maintained by the draft's author and/or close collaborators, and no independent production deployment was found for this report.
 
 #### Where the work happens
 
