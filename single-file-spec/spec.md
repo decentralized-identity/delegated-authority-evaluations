@@ -805,7 +805,7 @@ KYA-OS. The specification repository doubles as the TypeScript reference impleme
 
 * zCaps: a [W3C Credentials Community Group](https://www.w3.org/community/credentials/) work item, edited in [w3c-ccg/zcap-spec](https://github.com/w3c-ccg/zcap-spec) and discussed on the CCG mailing list and weekly calls.
 * UCAN: the [UCAN Working Group](https://github.com/ucan-wg) on GitHub, which is not under a standards body. Each sub-spec has its own repository, the main spec repository has Discussions enabled, and there is a [Discord](https://discord.gg/zSfgeHhKxA) linked from [ucan.xyz](https://ucan.xyz/).
-* KYA-OS: the [DIF Trusted AI Agents Working Group](https://identity.foundation/working-groups/trusted-agents.html), with a [mailing list](https://lists.identity.foundation/g/taawg), the DIF Slack channel #wg-trusted-ai-agents, and a weekly KYA-OS Task Force call. Changes land in [kya-os-mcp](https://github.com/decentralized-identity/kya-os-mcp) by lazy consensus, with a vote for breaking changes.
+* KYA-OS: the [DIF Trusted AI Agents Working Group](https://identity.foundation/working-groups/trusted-agents.html), with a [mailing list](https://lists.identity.foundation/g/taawg), the DIF Slack channel #wg-trusted-ai-agents, and a weekly KYA-OS Task Force call. Minor changes land in [kya-os-mcp](https://github.com/decentralized-identity/kya-os-mcp) by lazy consensus, with a vote required for any major changes or breaking changes.
 
 #### Last published version
 
