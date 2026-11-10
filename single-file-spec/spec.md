@@ -1201,7 +1201,7 @@ AuthZEN can serve as a strong runtime authorization and policy-decision layer wi
 
 However, AuthZEN is not a delegated-authority system. Delegation semantics, including delegation proof, attenuation, and revocation, remain outside the scope of Authorization API 1.0 and are provided by other components of the overall architecture. Likewise, policy representation is intentionally left to the underlying PDP implementation.
 
-Put plainly, AuthZEN on its own is an ambient authority framework. A PDP answers from the subject's standing permissions, and nothing in the protocol binds the caller's designation of a resource to the authority used. It should not be the sole basis for access decisions in a delegation stack. Its appropriate roles are deciding which capabilities to hand out to an authenticated principal, and serving as the internal decision interface of a resource's own verifier.
+Put plainly, AuthZEN on its own is an ambient authority framework. A PDP answers from the subject's standing permissions, and nothing in the protocol binds the caller's designation of a resource to the authority used. It should not be the sole basis for access decisions in a delegation stack. The roles which we recommend assigning to it in an authorization-and-policy stack are 1.) deciding which capabilities to hand out to an authenticated principal, and 2.) serving as the internal decision interface of a resource's own verifier.
 
 Understanding these boundaries is important when comparing AuthZEN with policy frameworks such as Cedar and delegation-focused approaches such as UCAN and zCAP.
 
