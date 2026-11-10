@@ -811,7 +811,7 @@ KYA-OS. The specification repository doubles as the TypeScript reference impleme
 
 * zCaps: [v0.4.0](https://w3c-ccg.github.io/zcap-spec/v0.4.0/), October 2026, a Community Group Draft. v0.3.0 was released in September 2026. The 0.4.0 changes are editorial relative to 0.3: the title drops "for Linked Data", the examples switch to Data Integrity proofs and gain `expires`, and the capabilityChain requirement on delegation proofs is stated explicitly.
 * UCAN: the core, Delegation, and Invocation specifications reached v1.0.0 in July 2026. The Revocation sub-spec remains at v1.0.0-rc.1, last changed in July 2025, and the Promise sub-spec, excluded from the v1.0.0 release, does not seem to be under active work.
-* KYA-OS: protocol specification 1.0.0, marked Stable, last edited October 2026. Repository releases (v1.20.0, October 2026) track the implementation rather than the specification text.
+* KYA-OS: protocol specification 1.0.0, marked Stable, last edited October 2026. Repository releases (v1.20.0, October 2026) track the implementation rather than the specification text. A non-binding feature roadmap for upcoming minor versions is maintained in the DIF task force.
 
 ## Modeling Chained Delegation with W3C VCs
 
