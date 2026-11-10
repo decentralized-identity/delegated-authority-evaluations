@@ -466,7 +466,7 @@ The confused deputy problem arises where a party exercises its own permissions o
 
 In the resource-managed, PS-asserted, and federated modes AAuth does this. The agent obtains a resource token naming the resource and scope; the auth token issued against it carries that binding, and the resource enforces it. The OPTIONAL account parameter, added in \-10, narrows the binding further: it names which account at the resource the authorization is for, drawn from the resource's own namespace, and is echoed through the resource token into the auth token, so an auth token for one account grants nothing at another.
 
-One caution applies. The account parameter scopes an authorization to an existing account at the resource. Deployments that lean on it may let agents operate within a person's account instead of under agent-specific grants, which drifts toward credential sharing and the audit and revocation problems that come with it.
+One caution applies. The account parameter scopes an authorization to an existing account at the resource. Deployments that lean on it may let agents operate within a principal's account instead of under agent-specific grants, which drifts toward credential sharing and the audit and revocation problems that come with it.
 
 Identity-based access is the exception, and a deliberate one. The agent signs requests with its agent token, and the resource applies its own access control based on who the agent is. There is no authorization flow and no designation carried with the request. The specification presents this as a replacement for API keys, which it is; but authority derived from identity alone is ambient, and an agent acting on a request supplied by another party has no way to signal that the request is not its own.
 
