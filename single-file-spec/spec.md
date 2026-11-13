@@ -770,7 +770,20 @@ Verifiable Credentials are a logical place to start, when thinking about how to 
 However, the domain of delegated permissions, specifically, presents additional data modeling and library reuse challenges, when it comes to data modeling and protocol design. This chapter attempts to highlight common stumbling blocks and provide best practices for using VCs for this purpose.
 
 
-### The operational risks of a semantic stretch 
+### Using VCs for Delegated Permissions: Executive Summary
+
+When using VCs to model delegated authorization/permission chains, keep in mind (neither of these are deal-breakers):
+
+* Off-the-shelf existing VC issuers and verifiers won't work (they don't have the concept of delegation chains). So, you're not going to get as much library and ecosystem re-use as you hoped. 
+* You lose the ability to have separate keys for `assertionMethod` (used for signing VCs) and `capabilityDelegation` and `capabilityInvocation` (used for delegating and invoking permissions). (The VC spec _requires_ its proofs to be signed by `assertionMethod` keys only.)
+ 
+Best practices when implementing delegated authorization/permission chains as VCs:
+
+1. You MUST sub-type the VC to mark it as a permission object (as opposed to general claims). For example, by adding a `DelegationCredential` sub-type in addition to the required `VerifiableCredential` type.
+2. Give each VC in the chain a unique top-level `id` (URNs are commonly used for this).
+3. Specify both the resource being acted upon, and the actions allowed. (For example, zcaps use `targetResource` for the former and `allowedAction` array for the latter). Having these two explicit properties prevents ambient authority traps.
+4. (Optional, but helpful) Designate the delegatee as `credentialSubject.id`. This helps reuse some of the holder binding mechanisms in existing VC libraries.
+5. Carefully design and specify your chain verification mechanism. This is the main missing part of existing VC libraries, and the hardest thing to get right.
 
 
 #### "proofPurpose" semantics and the separation of concerns it assumes
