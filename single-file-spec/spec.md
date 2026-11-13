@@ -762,7 +762,6 @@ The differences among the three are real but sit a level down, in encoding and e
 
 ## Modeling Chained Delegation with W3C VCs
 
-### The Pros and Cons of Bending the Semantics of the Verifiable Credential
 
 Two of the systems examined in this survey carry delegated authority inside a Verifiable Credential: KYA-OS, whose delegation credential is a W3C VC 2.0 wrapping a ZCAP-LD capability, and dSD-JWT, which appends delegation hops to an SD-JWT VC as disclosures. Since this survey evaluates systems for "authority tokenization" and cross-org security logging in family trees, we could squint a little and think of tokens-in-VCs as another family with shared (and distinguishing) trade-offs and properties worthy of comparison at the same level.
 
