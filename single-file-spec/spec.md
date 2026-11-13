@@ -767,7 +767,7 @@ Two of the systems examined in this survey carry delegated authority inside a Ve
 
 Verifiable Credentials are a logical place to start, when thinking about how to model permissions and delegations. After all, pretty much all of the delegated permission chain implementations are essentially "a JSON object with some properties, signed by the issuer". And VCs are the most popular, well known, and widely deployed mechanism for such signed objects.
 
-This chapter argues that the semantics and trust assumptions bound up in the intended informational flow of Verifiable Credentials can cause more less friction in delegated-authority use cases, particularly if modeled without care for the goals outlined in our group's problem space report. Encoding delegation as verifiable credentials is perhaps best seen as a _transitional_ solution to incrementally move away from domain-locked trust roots, but long-term the "open world" dynamics of an agentic web justify and necessitate further research and standardization of novel token formats for distributed trust topologies (transparency logs, self-certifying and multi-authority rather than issuer-rooted/domain-rooted tokens, etc.). The chapter also provides best practices and design pattern to best tokenize permissions using issuer-centric topoliges so as to achieve as much as possible the positive system properties that are the design goals for which this report optimizes.
+However, the domain of delegated permissions, specifically, presents additional data modeling and library reuse challenges, when it comes to data modeling and protocol design. This chapter attempts to highlight common stumbling blocks and provide best practices for using VCs for this purpose.
 
 
 ### The operational risks of a semantic stretch 
