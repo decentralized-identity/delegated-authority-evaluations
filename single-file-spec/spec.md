@@ -773,7 +773,6 @@ Put succinctly, a Verifiable Credential encode a claim from an authoritative sou
 
 ### The operational risks of a semantic stretch 
 
-There are four semantic slippages when encoding authority delegations as issued claims, and two properties missing from the Verifiable Credentials core specification that have to modeled on top as an ecosystem profile or a user-space schema.
 
 #### "proofPurpose" semantics and the separation of concerns it assumes
 
