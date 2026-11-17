@@ -853,7 +853,6 @@ An authentication event for a credential is not quite the same as the invocation
 #### Use a real Data Integrity cryptosuite
 
 
-The chain walk algorithm will necessarily be custom and might even vary per usecase; the cryptographic mechanics at each step should be hardened and as mechanical as possible. KYA-OS's ratified profile uses `eddsa-jcs-2022`. An earlier draft labeled a non-standard construction with a standard suite name, which is a subtle failure only exposed in rigorous testing or (as in KYA-OS's case) in thorough peer review, which is sadly still a common failure mode to encounter in the wild for Verifiable Credentials.
 
 ### Why current VC libraries cannot verify a delegation chain
 
