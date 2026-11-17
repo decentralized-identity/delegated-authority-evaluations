@@ -1,5 +1,5 @@
 ---
-name: Specification to Evaluation
+name: Specification to Evaluate
 about: Use this template to propose a specification be reviewed by the group.
 title: "[Spec to eval] <<brief description of the specification's context, usage, and governance>>"
 champion: <<Name>> ( <<github handle>> )
@@ -9,7 +9,7 @@ labels: spec
 
 ## Name of Specification
 
-_<!-- Insert Common name for specific here -->_
+_<!-- Insert common name for specific here -->_
 
 ### Presumed Context
 
@@ -21,7 +21,9 @@ _<!-- What system or group of systems implements the specification? Is it primar
 
 ### How to incorporate in the current editor's draft
 
-_<!-- Do you think the specification proposed justifies an entire chapter, a mention or section in an existing chapter, or an appendix? How does the specification relate to those already analyzed in the current draft? -->_
+_<!-- How does the specification relate to those already analyzed in the current draft? -->_
+
+_<!-- Do you think the specification proposed justifies adding an entire chapter, a section in an existing chapter, an appendix, or just a mention? -->_
 
 ## About you  
 
