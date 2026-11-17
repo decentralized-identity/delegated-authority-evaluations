@@ -767,7 +767,7 @@ Two of the systems examined in this survey carry delegated authority inside a Ve
 
 Verifiable Credentials are a logical place to start, when thinking about how to model permissions and delegations. After all, pretty much all of the delegated permission chain implementations are essentially "a JSON object with some properties, signed by the issuer". And VCs are the most popular, well known, and widely deployed mechanism for such signed objects.
 
-However, the domain of delegated permissions, specifically, presents additional data modeling and library reuse challenges, when it comes to data modeling and protocol design. This chapter attempts to highlight common stumbling blocks and provide best practices for using VCs for this purpose.
+However, the domain of delegated permissions, specifically, presents additional data modeling and library reuse challenges, when it comes to protocol design. This chapter attempts to highlight common stumbling blocks and provide best practices for using VCs for this purpose.
 
 
 ### Using VCs for Delegated Permissions: Executive Summary
