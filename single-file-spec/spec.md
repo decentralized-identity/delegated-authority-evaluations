@@ -850,7 +850,6 @@ A VC has no property for encoding chaining relationships, so the design must cho
 
 An authentication event for a credential is not quite the same as the invocation event of a permission document, syntactically or semantically. Authenticating a credential, even with VC-style holder binding, proves that the presenter controls the credential-subject's published key at presentation time, but it does NOT prove (in any direct way) that the request being made by that presenter corresponds to what the issuer of the credential intended to authorize. To prove both of these things, the presentation protocol needs to include a per-request proof of possession over the request itself (zCaps use HTTP signatures or a `capabilityInvocation` proof; KYA-OS uses a detached JWS over the canonicalized JSON-RPC call; dSD-JWT uses a Key Binding JWT with audience and nonce). It also needs a stated "join" logic: the key that signed the request must be verified (as appropriate to the key resolution mechanism and use case) to represent the delegatee identified by the leaf hop (i.e. the delegatee property in the hop's verifiable credential). KYA-OS explicitly verifies this for each hop, recomputes it on every verification, and logs it for later replay/inspection; that careful and mission-critical recomputation, not the credential, is what prevents a delegation to key A being exercised by key B.
 
-#### Use a real Data Integrity cryptosuite
 
 
 
