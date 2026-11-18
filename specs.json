@@ -19,7 +19,7 @@
     },
     {
       "title": "Delegated Authority Evaluations v1.0-rc1",
-      "spec_directory": "./single-file-spec",
+      "spec_directory": "./single-file-spec/v1.0-rc1/",
       "output_path": "./site/v1.0-rc1/",
       "logo": "../logo.svg",
       "logo_link": "https://github.com/decentralized-identity/delegated-authority-evaluations",
