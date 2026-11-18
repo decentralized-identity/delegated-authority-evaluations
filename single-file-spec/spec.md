@@ -31,7 +31,12 @@ Participate:
 
 ------------------------------------
 
-## Related Specifications
+## Abstract
+
+This report evaluates the current landscape of agentic authorization and policy specifically through the landscape of how explicit, loggable, and enforceable they
+make the delegation of authority, between humans within and across organizations, as well as between agents and principles, agents and subagents, or agents and tools. It tries to be synoptic but not exhaustive, so equal detail is not given for all considered protocol families and schools of thought. It is a companion to the Problem Space Report, the Specification Evaluations, and the Threat Model, and does not itself specify a protocol.
+
+### Related Specifications
 
 - [Problem Space Report](https://identity.foundation/delegated-authority-report/)
 - Specification Evaluations (You are here)
