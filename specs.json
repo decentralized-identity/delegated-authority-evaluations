@@ -1,10 +1,27 @@
 {
   "specs": [
     {
-      "title": "Delegated Authority Evaluations",
+      "title": "Delegated Authority Evaluations v1.0 Preview",
       "spec_directory": "./single-file-spec",
-      "output_path": "./",
-      "logo": "logo.svg",
+      "output_path": "./site/",
+      "logo": "./logo.svg",
+      "logo_link": "https://github.com/decentralized-identity/delegated-authority-evaluations",
+      "source": {
+        "host": "github",
+        "account": "decentralized-identity",
+        "repo": "delegated-authority-evaluations"
+      },
+      "external_specs": [
+        {
+         }
+      ],
+      "katex": true
+    },
+    {
+      "title": "Delegated Authority Evaluations v1.0-rc1",
+      "spec_directory": "./single-file-spec",
+      "output_path": "./site/",
+      "logo": "../logo.svg",
       "logo_link": "https://github.com/decentralized-identity/delegated-authority-evaluations",
       "source": {
         "host": "github",
