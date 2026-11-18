@@ -18,14 +18,6 @@ Contributors:
 ~ [Sachio Iwamoto](https://www.linkedin.com/in/sachio-iwamoto/) - ([Kyndryl](https://www.kyndryl.com/us/en))
 ~ [Alan Karp](https://www.linkedin.com/in/alanhkarp/) - [SitePassword](https://github.com/alanhkarp/SitePassword/)
 
-**Related Specifications:**
-
-- [Problem Space Report](https://identity.foundation/delegated-authority-report/)
-- Specification Evaluations (You are here)
-- [Threat Model](https://identity.foundation/delegated-authority-threat-model/)
-- [Governance Considerations](https://identity.foundation/governance-of-delegated-authority-report/)
-- [Agentic-Delegation User-Story Walk-through](https://www.youtube.com/watch?v=u-uWl_s0PPM)
-
 Participate:
 
 ~ [GitHub repo](https://github.com/decentralized-identity/delegated-authority-evaluations)
@@ -33,6 +25,14 @@ Participate:
 ~ [Commit history](https://github.com/decentralized-identity/delegated-authority-evaluations/commits/master)
 
 ------------------------------------
+
+## Related Specifications
+
+- [Problem Space Report](https://identity.foundation/delegated-authority-report/)
+- Specification Evaluations (You are here)
+- [Threat Model](https://identity.foundation/delegated-authority-threat-model/)
+- [Governance Considerations](https://identity.foundation/governance-of-delegated-authority-report/)
+- [Agentic-Delegation User-Story Walk-through](https://www.youtube.com/watch?v=u-uWl_s0PPM)
 
 ## Introduction
 
